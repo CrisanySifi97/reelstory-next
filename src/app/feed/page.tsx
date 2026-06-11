@@ -181,6 +181,9 @@ function FeedContent() {
   const [muted, setMuted]               = useState(false)
   const [tapIcon, setTapIcon]           = useState<'play'|'pause'|null>(null)
   const [progress, setProgress]         = useState(0)
+  const [currentTime, setCurrentTime]   = useState('0:00')
+  const [totalTime, setTotalTime]       = useState('0:00')
+  const seekBarRef = useRef<HTMLDivElement>(null)
 
   // auth / user data
   const [uid, setUid]                   = useState<string | null>(null)
@@ -199,6 +202,26 @@ function FeedContent() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const progRef   = useRef<ReturnType<typeof setInterval> | null>(null)
   const videoRef  = useRef<HTMLVideoElement>(null)
+
+  const fmtTime = (s: number) => {
+    const t = Math.floor(s || 0)
+    return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`
+  }
+
+  const seekTo = (pct: number) => {
+    const v = videoRef.current
+    if (!v || !v.duration) return
+    v.currentTime = Math.max(0, Math.min(pct, 1)) * v.duration
+  }
+
+  const handleSeekBarInteraction = (e: React.MouseEvent | React.TouchEvent) => {
+    const bar = seekBarRef.current
+    if (!bar) return
+    const rect = bar.getBoundingClientRect()
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+    const pct = Math.max(0, Math.min((clientX - rect.left) / rect.width, 1))
+    seekTo(pct)
+  }
 
   /* ── Video playback ── */
   const handleTap = () => {
@@ -240,6 +263,8 @@ function FeedContent() {
   useEffect(() => {
     if (progRef.current) clearInterval(progRef.current)
     setProgress(0)
+    setCurrentTime('0:00')
+    setTotalTime('0:00')
     setPlaying(true)
     setMuted(false)
     const ep = episodes[currentIdx]
@@ -412,7 +437,15 @@ function FeedContent() {
                     }}
                     onTimeUpdate={() => {
                       const v = videoRef.current
-                      if (v && v.duration) setProgress((v.currentTime / v.duration) * 100)
+                      if (v && v.duration) {
+                        setProgress((v.currentTime / v.duration) * 100)
+                        setCurrentTime(fmtTime(v.currentTime))
+                        setTotalTime(fmtTime(v.duration))
+                      }
+                    }}
+                    onLoadedMetadata={() => {
+                      const v = videoRef.current
+                      if (v) setTotalTime(fmtTime(v.duration))
                     }}
                   />
                   {/* Preload next episode in background */}
@@ -491,10 +524,53 @@ function FeedContent() {
                 </div>
               </div>
 
-              {/* Progress bar (non-video) */}
-              {(!hasVideo || !isCurrent) && (
-                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: 'rgba(255,255,255,.18)', zIndex: 20 }}>
-                  <div style={{ height: '100%', width: isCurrent ? `${progress}%` : idx < currentIdx ? '100%' : '0%', background: 'var(--rs-primary)', transition: isCurrent ? 'none' : 'width .3s' }} />
+              {/* ── Seek bar ── */}
+              {isCurrent && (
+                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 30, padding: '0 0 6px' }}>
+                  {/* Time display */}
+                  {hasVideo && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 14px 4px', pointerEvents: 'none' }}>
+                      <span style={{ fontSize: '.68rem', color: 'rgba(255,255,255,.8)', fontVariantNumeric: 'tabular-nums', fontWeight: 600, textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>{currentTime}</span>
+                      <span style={{ fontSize: '.68rem', color: 'rgba(255,255,255,.5)', fontVariantNumeric: 'tabular-nums', fontWeight: 600, textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>{totalTime}</span>
+                    </div>
+                  )}
+                  {/* Bar track — touch area */}
+                  <div
+                    ref={hasVideo && isCurrent ? seekBarRef : undefined}
+                    style={{ height: 28, display: 'flex', alignItems: 'center', padding: '0 14px', cursor: hasVideo ? 'pointer' : 'default' }}
+                    onClick={hasVideo ? handleSeekBarInteraction : undefined}
+                    onTouchStart={hasVideo ? (e) => { e.stopPropagation(); handleSeekBarInteraction(e) } : undefined}
+                    onTouchMove={hasVideo ? (e) => { e.stopPropagation(); handleSeekBarInteraction(e) } : undefined}
+                  >
+                    <div style={{ position: 'relative', flex: 1, height: 3, background: 'rgba(255,255,255,.22)', borderRadius: 3 }}>
+                      {/* Fill */}
+                      <div style={{
+                        position: 'absolute', top: 0, left: 0, height: '100%',
+                        width: `${isCurrent ? progress : idx < currentIdx ? 100 : 0}%`,
+                        background: hasVideo ? '#fff' : 'var(--rs-primary)',
+                        borderRadius: 3,
+                        transition: hasVideo ? 'none' : 'width .3s'
+                      }} />
+                      {/* Thumb — só no episódio actual com vídeo */}
+                      {hasVideo && (
+                        <div style={{
+                          position: 'absolute', top: '50%', left: `${progress}%`,
+                          transform: 'translate(-50%, -50%)',
+                          width: 14, height: 14, borderRadius: '50%',
+                          background: '#fff',
+                          boxShadow: '0 0 0 2px rgba(255,255,255,.3), 0 2px 6px rgba(0,0,0,.5)',
+                          transition: 'none',
+                          pointerEvents: 'none'
+                        }} />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* Thin bar for non-current episodes */}
+              {!isCurrent && (
+                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: 'rgba(255,255,255,.12)', zIndex: 20 }}>
+                  <div style={{ height: '100%', width: idx < currentIdx ? '100%' : '0%', background: 'var(--rs-primary)', borderRadius: 3 }} />
                 </div>
               )}
 
