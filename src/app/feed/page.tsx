@@ -378,20 +378,39 @@ function FeedContent() {
 
   const currentEp = episodes[currentIdx] as EpisodeWithId | undefined
 
+  // ── Auto-hide UI after 3s ──────────────────────────────────────────────────
+  const [uiVisible, setUiVisible] = useState(true)
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const resetHideTimer = () => {
+    setUiVisible(true)
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+    hideTimerRef.current = setTimeout(() => setUiVisible(false), 3000)
+  }
+
+  useEffect(() => {
+    resetHideTimer()
+    return () => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIdx])
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden', display: 'flex', flexDirection: 'column', color: '#fff', fontFamily: 'var(--rs-font-body)' }}>
+    <div
+      style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden', display: 'flex', flexDirection: 'column', color: '#fff', fontFamily: 'var(--rs-font-body)' }}
+      onClick={resetHideTimer}
+      onTouchStart={resetHideTimer}
+    >
 
       {/* ── Top bar ── */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 200, padding: 'calc(env(safe-area-inset-top, 12px) + 8px) 16px 12px', display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(to bottom, rgba(0,0,0,.72) 0%, transparent 100%)', pointerEvents: 'none' }}>
-        <button onClick={() => router.back()} style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(0,0,0,.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0, pointerEvents: 'all', border: 'none', cursor: 'pointer' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 200, padding: 'calc(env(safe-area-inset-top, 12px) + 8px) 16px 12px', display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(to bottom, rgba(0,0,0,.72) 0%, transparent 100%)', pointerEvents: 'none', opacity: uiVisible ? 1 : 0, transition: 'opacity .4s ease' }}>
+        <button onClick={(e) => { e.stopPropagation(); router.back() }} style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(0,0,0,.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0, pointerEvents: uiVisible ? 'all' : 'none', border: 'none', cursor: 'pointer' }}>
           <ArrowLeft size={18} />
         </button>
         <div style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontFamily: 'var(--rs-font-display)', fontWeight: 900, fontSize: '.92rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 1px 6px rgba(0,0,0,.8)' }}>{drama.title}</div>
-          <div style={{ fontSize: '.7rem', color: 'rgba(255,255,255,.6)', fontWeight: 600 }}>EP. {currentIdx + 1} / {episodes.length}</div>
+          <div style={{ fontSize: '.72rem', color: 'rgba(255,255,255,.65)', fontWeight: 600 }}>EP. {currentIdx + 1} / {episodes.length}</div>
         </div>
         {coins > 0 && (
-          <Link href="/pontos" style={{ display: 'flex', alignItems: 'center', gap: '.3rem', background: 'rgba(255,217,61,.15)', border: '1px solid rgba(255,217,61,.4)', borderRadius: 50, padding: '.28rem .65rem', color: 'var(--rs-accent)', fontSize: '.78rem', fontWeight: 700, textDecoration: 'none', flexShrink: 0, pointerEvents: 'all' }}>
+          <Link href="/pontos" onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '.3rem', background: 'rgba(255,217,61,.15)', border: '1px solid rgba(255,217,61,.4)', borderRadius: 50, padding: '.28rem .65rem', color: 'var(--rs-accent)', fontSize: '.78rem', fontWeight: 700, textDecoration: 'none', flexShrink: 0, pointerEvents: uiVisible ? 'all' : 'none' }}>
             <Coins size={12} /> {coins.toLocaleString('pt-AO')}
           </Link>
         )}
@@ -478,7 +497,7 @@ function FeedContent() {
               <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '55%', background: 'linear-gradient(to top, rgba(0,0,0,.9) 0%, transparent 100%)', pointerEvents: 'none', zIndex: 4 }} />
 
               {/* ── Right action rail ── */}
-              <div style={{ position: 'absolute', right: 12, bottom: 110, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, zIndex: 10 }}>
+              <div style={{ position: 'absolute', right: 12, bottom: 110, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, zIndex: 10, opacity: uiVisible ? 1 : 0, transition: 'opacity .4s ease', pointerEvents: uiVisible ? 'auto' : 'none' }}>
                 {hasVideo && isCurrent && (
                   <RailButton
                     icon={muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
@@ -512,7 +531,7 @@ function FeedContent() {
               </div>
 
               {/* ── Bottom info ── */}
-              <div style={{ position: 'absolute', left: 0, right: 70, bottom: 0, padding: '1.5rem 1rem 1.2rem', zIndex: 10 }}>
+              <div style={{ position: 'absolute', left: 0, right: 70, bottom: 0, padding: '1.5rem 1rem 1.2rem', zIndex: 10, opacity: uiVisible ? 1 : 0, transition: 'opacity .4s ease', pointerEvents: 'none' }}>
                 <div style={{ fontFamily: 'var(--rs-font-display)', fontWeight: 900, fontSize: '1rem', letterSpacing: '-.01em', textShadow: '0 1px 4px rgba(0,0,0,.8)', marginBottom: '.3rem' }}>{drama.title}</div>
                 <div style={{ fontSize: '.88rem', fontWeight: 600, color: 'rgba(255,255,255,.85)', marginBottom: '.4rem', lineHeight: 1.3, textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>{ep.title}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', fontSize: '.72rem', color: 'rgba(255,255,255,.6)', fontWeight: 600 }}>
@@ -525,7 +544,7 @@ function FeedContent() {
 
               {/* ── Seek bar ── */}
               {isCurrent && (
-                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 30, padding: '0 0 6px' }}>
+                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 30, padding: '0 0 6px', opacity: uiVisible ? 1 : 0, transition: 'opacity .4s ease', pointerEvents: uiVisible ? 'auto' : 'none' }}>
                   {/* Time display */}
                   {hasVideo && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 14px 4px', pointerEvents: 'none' }}>
