@@ -214,6 +214,8 @@ function FeedContent() {
     v.currentTime = Math.max(0, Math.min(pct, 1)) * v.duration
   }
 
+  const seekDragRef = useRef<{ startX: number; startY: number; dragging: boolean }>({ startX: 0, startY: 0, dragging: false })
+
   const handleSeekBarInteraction = (e: React.MouseEvent | React.TouchEvent) => {
     const bar = seekBarRef.current
     if (!bar) return
@@ -221,6 +223,22 @@ function FeedContent() {
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
     const pct = Math.max(0, Math.min((clientX - rect.left) / rect.width, 1))
     seekTo(pct)
+  }
+
+  const handleSeekTouchStart = (e: React.TouchEvent) => {
+    seekDragRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, dragging: false }
+  }
+
+  const handleSeekTouchMove = (e: React.TouchEvent) => {
+    const { startX, startY } = seekDragRef.current
+    const dx = Math.abs(e.touches[0].clientX - startX)
+    const dy = Math.abs(e.touches[0].clientY - startY)
+    // Só intervém se o gesto for claramente horizontal (seek)
+    if (dx > dy && dx > 6) {
+      seekDragRef.current.dragging = true
+      e.stopPropagation()
+      handleSeekBarInteraction(e)
+    }
   }
 
   /* ── Video playback ── */
@@ -539,8 +557,8 @@ function FeedContent() {
                     ref={hasVideo && isCurrent ? seekBarRef : undefined}
                     style={{ height: 28, display: 'flex', alignItems: 'center', padding: '0 14px', cursor: hasVideo ? 'pointer' : 'default' }}
                     onClick={hasVideo ? handleSeekBarInteraction : undefined}
-                    onTouchStart={hasVideo ? (e) => { e.stopPropagation(); handleSeekBarInteraction(e) } : undefined}
-                    onTouchMove={hasVideo ? (e) => { e.stopPropagation(); handleSeekBarInteraction(e) } : undefined}
+                    onTouchStart={hasVideo ? handleSeekTouchStart : undefined}
+                    onTouchMove={hasVideo ? handleSeekTouchMove : undefined}
                   >
                     <div style={{ position: 'relative', flex: 1, height: 3, background: 'rgba(255,255,255,.22)', borderRadius: 3 }}>
                       {/* Fill */}
