@@ -65,21 +65,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt" translate="no" suppressHydrationWarning>
       <head>
-        {/* iOS PWA */}
-        <meta name="apple-mobile-web-app-capable" content="yes"/>
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-        <meta name="apple-mobile-web-app-title" content="ReelStory"/>
-        <meta name="mobile-web-app-capable" content="yes"/>
-
-        {/* iOS splash & touch icon */}
-        <link rel="apple-touch-icon" href="/icon-180.png"/>
-        <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png"/>
-        <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png"/>
-
-        {/* Fonts */}
+        {/* Fonts — preconnect first for faster load */}
         <link rel="preconnect" href="https://fonts.googleapis.com"/>
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous"/>
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+        <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700&display=swap"/>
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
       </head>
       <body suppressHydrationWarning>
         {children}

@@ -1,7 +1,7 @@
 'use client'
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, X, Star, SearchX, Bookmark } from 'lucide-react'
+import { Search, X, Star, SearchX } from 'lucide-react'
 import Nav from '@/components/layout/Nav'
 import BottomNav from '@/components/layout/BottomNav'
 import Footer from '@/components/layout/Footer'

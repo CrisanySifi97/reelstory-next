@@ -6,7 +6,7 @@ import { Play, Plus, ChevronLeft, ChevronRight, BookmarkCheck } from 'lucide-rea
 import Nav from '@/components/layout/Nav'
 import BottomNav from '@/components/layout/BottomNav'
 import Footer from '@/components/layout/Footer'
-import { DRAMAS, BADGE_STYLE } from '@/lib/mock'
+import { BADGE_STYLE } from '@/lib/mock'
 import type { Drama } from '@/types'
 import { useMyList } from '@/lib/useMyList'
 import { useDramas } from '@/lib/useDramas'
@@ -53,7 +53,7 @@ function DramaCard({ drama, size = 'normal', rank, progress, onClick, onToast, o
   )
 }
 
-function Row({ title, items, cardFn }: { title:string; items:typeof DRAMAS; cardFn:(d:typeof DRAMAS[0],i:number)=>React.ReactNode }) {
+function Row({ title, items, cardFn }: { title:string; items:(Drama & { icon:string })[]; cardFn:(d:Drama & { icon:string },i:number)=>React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null)
   if (!items.length) return null
   const scroll = (dir:number) => trackRef.current?.scrollBy({ left:dir*500, behavior:'smooth' })

@@ -13,7 +13,6 @@ import {
   serverTimestamp, arrayUnion, arrayRemove,
 } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
-import { DRAMAS } from '@/lib/mock'
 import { useDrama } from '@/lib/useDramas'
 import { useMyList } from '@/lib/useMyList'
 import Poster from '@/components/Poster'
@@ -169,9 +168,8 @@ function FeedContent() {
   const dramaId  = params.get('id') ?? '1'
   const startEp  = Number(params.get('ep') ?? 0)
 
-  const { drama: liveDrama } = useDrama(dramaId)
-  const drama    = (liveDrama ?? DRAMAS.find(d => d.id === dramaId) ?? DRAMAS[0]) as typeof DRAMAS[0]
-  const episodes = (drama.episodes ?? []) as EpisodeWithId[]
+  const { drama, loading: dramaLoading } = useDrama(dramaId)
+  const episodes = (drama?.episodes ?? []) as EpisodeWithId[]
 
   const { toggle: toggleList, isInList } = useMyList()
 
@@ -297,8 +295,9 @@ function FeedContent() {
     return () => container.removeEventListener('scroll', onScroll)
   }, [currentIdx])
 
-  const isUnlocked = (ep: EpisodeWithId) => ep.free || unlocked.has(`${drama.id}_${ep.id}`)
-  const epKey = (ep: EpisodeWithId) => `${drama.id}_${ep.id ?? ep.order}`
+  const dramaId2 = drama!.id  // safe: null case handled by early return above
+  const isUnlocked = (ep: EpisodeWithId) => ep.free || unlocked.has(`${dramaId2}_${ep.id}`)
+  const epKey = (ep: EpisodeWithId) => `${dramaId2}_${ep.id ?? ep.order}`
 
   /* ── Auto-play / pause based on sheet state ── */
   useEffect(() => {
@@ -327,7 +326,7 @@ function FeedContent() {
       return
     }
     if (!uid) return
-    const key = `${drama.id}_${ep.id}`
+    const key = `${drama!.id}_${ep.id}`
     if (coins <= 0) {
       setShowNoPoints(true)
       return
@@ -358,16 +357,16 @@ function FeedContent() {
 
   /* ── Save drama to list ── */
   const handleSave = async () => {
-    const r = await toggleList(drama.id)
+    const r = await toggleList(drama!.id)
     if (r === 'login') { showToast('Entra para guardar'); return }
     showToast(r === 'added' ? '✓ Série guardada na lista!' : 'Removida da lista')
   }
 
   /* ── Share ── */
   const handleShare = async () => {
-    const url = `${window.location.origin}/detalhe?id=${drama.id}`
+    const url = `${window.location.origin}/detalhe?id=${drama!.id}`
     if (navigator.share) {
-      await navigator.share({ title: drama.title, text: `Vê "${drama.title}" na ReelStory`, url }).catch(() => {})
+      await navigator.share({ title: drama!.title, text: `Vê "${drama!.title}" na ReelStory`, url }).catch(() => {})
     } else {
       await navigator.clipboard.writeText(url).catch(() => {})
       showToast('Link copiado!')
@@ -377,6 +376,20 @@ function FeedContent() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
   const currentEp = episodes[currentIdx] as EpisodeWithId | undefined
+
+  // Loading / not found guard
+  if (dramaLoading) return (
+    <div style={{ position:'fixed', inset:0, background:'#000', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontFamily:'var(--rs-font-body)' }}>
+      <div style={{ width:40, height:40, border:'3px solid rgba(255,255,255,.15)', borderTopColor:'var(--rs-primary)', borderRadius:'50%', animation:'spin .8s linear infinite' }} />
+    </div>
+  )
+  if (!drama) return (
+    <div style={{ position:'fixed', inset:0, background:'#000', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'1rem', color:'#fff', fontFamily:'var(--rs-font-body)' }}>
+      <span style={{ fontSize:'2rem' }}>⚠️</span>
+      <p>Série não encontrada</p>
+      <button onClick={() => router.back()} style={{ background:'var(--rs-primary)', border:'none', color:'#fff', padding:'.6rem 1.4rem', borderRadius:50, cursor:'pointer', fontWeight:700 }}>Voltar</button>
+    </div>
+  )
 
   // ── Auto-hide UI after 3s ──────────────────────────────────────────────────
   const [uiVisible, setUiVisible] = useState(true)
@@ -423,7 +436,7 @@ function FeedContent() {
           const hasVideo  = !!(ep.url || ep.ytId)
           const isCurrent = idx === currentIdx
           const isLiked   = likedEps.has(epKey(ep))
-          const isSaved   = isInList(drama.id)
+          const isSaved   = isInList(drama!.id)
 
           return (
             <div key={ep.id ?? idx} style={{ height: '100dvh', scrollSnapAlign: 'start', scrollSnapStop: 'always', position: 'relative', overflow: 'hidden', background: '#000' }}>
@@ -433,7 +446,7 @@ function FeedContent() {
                 <>
                   <video
                     ref={videoRef}
-                    key={`${drama.id}-${ep.url ?? ep.ytId}-${idx}`}
+                    key={`${drama!.id}-${ep.url ?? ep.ytId}-${idx}`}
                     src={hdUrl(ep.url)}
                     autoPlay
                     playsInline
@@ -532,12 +545,12 @@ function FeedContent() {
 
               {/* ── Bottom info ── */}
               <div style={{ position: 'absolute', left: 0, right: 70, bottom: 0, padding: '1.5rem 1rem 1.2rem', zIndex: 10, opacity: uiVisible ? 1 : 0, transition: 'opacity .4s ease', pointerEvents: 'none' }}>
-                <div style={{ fontFamily: 'var(--rs-font-display)', fontWeight: 900, fontSize: '1rem', letterSpacing: '-.01em', textShadow: '0 1px 4px rgba(0,0,0,.8)', marginBottom: '.3rem' }}>{drama.title}</div>
+                <div style={{ fontFamily: 'var(--rs-font-display)', fontWeight: 900, fontSize: '1rem', letterSpacing: '-.01em', textShadow: '0 1px 4px rgba(0,0,0,.8)', marginBottom: '.3rem' }}>{drama!.title}</div>
                 <div style={{ fontSize: '.88rem', fontWeight: 600, color: 'rgba(255,255,255,.85)', marginBottom: '.4rem', lineHeight: 1.3, textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>{ep.title}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', fontSize: '.72rem', color: 'rgba(255,255,255,.6)', fontWeight: 600 }}>
-                  <span>👁 {fmtViews(drama.views)}</span>
+                  <span>👁 {fmtViews(drama!.views)}</span>
                   <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
-                  <span style={{ color: 'var(--rs-accent)' }}>★ {drama.rating}</span>
+                  <span style={{ color: 'var(--rs-accent)' }}>★ {drama!.rating}</span>
                   {ep.free && <span style={{ color: '#22c55e', fontWeight: 700 }}>· Grátis</span>}
                 </div>
               </div>
