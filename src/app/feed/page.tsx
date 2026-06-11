@@ -295,7 +295,7 @@ function FeedContent() {
     return () => container.removeEventListener('scroll', onScroll)
   }, [currentIdx])
 
-  const dramaId2 = drama!.id  // safe: null case handled by early return above
+  const dramaId2 = drama?.id ?? ''
   const isUnlocked = (ep: EpisodeWithId) => ep.free || unlocked.has(`${dramaId2}_${ep.id}`)
   const epKey = (ep: EpisodeWithId) => `${dramaId2}_${ep.id ?? ep.order}`
 
