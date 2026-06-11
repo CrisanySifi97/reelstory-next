@@ -1,0 +1,59 @@
+{
+  "name": "ReelStory",
+  "short_name": "ReelStory",
+  "description": "Microdramas verticais · Angola. Desbloqueia episódios com pontos. Sem mensalidades.",
+  "start_url": "/inicio",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "orientation": "portrait-primary",
+  "min_width": 320,
+  "min_height": 600,
+  "background_color": "#141414",
+  "theme_color": "#FF385C",
+  "lang": "pt",
+  "dir": "ltr",
+  "categories": ["entertainment", "lifestyle"],
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ],
+  "screenshots": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "ReelStory — Página de início"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Explorar Séries",
+      "short_name": "Séries",
+      "description": "Ver todas as séries disponíveis",
+      "url": "/explorar",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Minha Lista",
+      "short_name": "Lista",
+      "description": "Séries guardadas",
+      "url": "/lista",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Comprar Pontos",
+      "short_name": "Pontos",
+      "description": "Recarregar pontos para desbloquear episódios",
+      "url": "/pontos",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

@@ -1,0 +1,133 @@
+@import './tokens.css';
+
+/* ── Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  margin: 0; padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--rs-font-body);
+  background: var(--rs-bg-warm);
+  color: var(--rs-text);
+  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
+  line-height: var(--rs-lh-normal);
+  min-height: 100dvh;
+}
+
+input, select, textarea, button {
+  font-family: var(--rs-font-body);
+  font-size: 16px; /* previne zoom iOS */
+}
+
+img, video { max-width: 100%; height: auto; display: block; }
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Utility classes ── */
+.rs-font-display { font-family: var(--rs-font-display); font-weight: var(--rs-w-black); }
+.rs-text-muted   { color: var(--rs-text-muted); }
+.rs-text-accent  { color: var(--rs-accent); }
+.rs-text-primary { color: var(--rs-primary); }
+
+/* Fade-up reveal */
+.fade-up { opacity: 0; transform: translateY(20px); transition: opacity var(--rs-d-slower), transform var(--rs-d-slower); }
+.fade-up.visible { opacity: 1; transform: translateY(0); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 2px; }
+
+/* ── Mobile safe-area ── */
+.pb-safe { padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+
+/* ══ PWA — Standalone mode (installed app) ══ */
+@media (display-mode: standalone) {
+  /* Remove bounce / pull-to-refresh */
+  html { overscroll-behavior: none; }
+  body { overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
+
+  /* Nav gets extra top padding for iOS status bar */
+  .rs-nav-pwa {
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    height: calc(72px + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  /* Body top offset to match expanded nav */
+  .rs-body-pwa {
+    padding-top: calc(var(--rs-nav-h) + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  /* Bottom nav safe area */
+  .bottom-nav {
+    height: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+
+  /* iOS: hide default text selection highlight */
+  * { -webkit-tap-highlight-color: transparent; }
+
+  /* Prevent double-tap zoom */
+  * { touch-action: manipulation; }
+}
+
+/* ══ PWA — Window Controls Overlay (Desktop PWA) ══ */
+@media (display-mode: window-controls-overlay) {
+  .rs-nav-pwa {
+    padding-left: max(env(titlebar-area-x, 0px), 2rem) !important;
+    padding-top: 0 !important;
+    height: env(titlebar-area-height, 72px) !important;
+    /* Drag region for moving the window */
+    -webkit-app-region: drag;
+  }
+  /* Make interactive elements non-draggable */
+  .rs-nav-pwa a,
+  .rs-nav-pwa button,
+  .rs-nav-pwa input {
+    -webkit-app-region: no-drag;
+  }
+}
+
+/* ══ PWA install prompt animation ══ */
+@keyframes rs-slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes rs-slide-down {
+  from { transform: translateY(0);    opacity: 1; }
+  to   { transform: translateY(100%); opacity: 0; }
+}
+
+/* ── Mobile: nav height override + anti-zoom ── */
+@media (max-width: 768px) {
+  :root {
+    --rs-nav-h: calc(56px + env(safe-area-inset-top, 0px));
+  }
+  /* Font-size 16px everywhere on mobile prevents iOS auto-zoom on input focus */
+  input, select, textarea {
+    font-size: 16px !important;
+    touch-action: manipulation;
+  }
+}
+
+/* ── Skeleton shimmer ── */
+.rs-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,.10) 50%, rgba(255,255,255,.05) 100%);
+  background-size: 200% 100%;
+  animation: rs-sh 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
+@keyframes rs-sh {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}

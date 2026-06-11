@@ -1,0 +1,167 @@
+/*
+   REELSTORY — COLORS & TYPE TOKENS
+   Vertical microdramas · Angola · Portuguese-language streaming
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@400;500;700&display=swap');
+
+:root {
+  /* BRAND COLORS */
+  --rs-primary:        #FF385C;
+  --rs-primary-dark:   #D50032;
+  --rs-primary-deep:   #8B0000;
+  --rs-accent:         #FFD93D;
+  --rs-accent-warm:    #FF9500;
+  --rs-secondary:      #00A699;
+
+  /* DARK SURFACES */
+  --rs-bg-warm:        #141414;
+  --rs-bg-warm-2:      #1a1a1a;
+  --rs-bg-warm-3:      #222222;
+  --rs-bg-cool:        #1A1A2E;
+  --rs-bg-cool-2:      #16213E;
+  --rs-bg-cool-3:      #0f1729;
+  --rs-bg-card:        #1e1e2e;
+  --rs-bg-deepest:     #0a0a14;
+
+  /* TEXT */
+  --rs-text:           #FFFFFF;
+  --rs-text-muted:     #8892A4;
+  --rs-text-muted-2:   #B8B8B8;
+  --rs-text-faint:     #666666;
+
+  /* BORDERS */
+  --rs-border-soft:    rgba(255,255,255,.06);
+  --rs-border-base:    rgba(255,255,255,.10);
+  --rs-border-strong:  rgba(255,255,255,.15);
+  --rs-border-primary: rgba(255,56,92,.30);
+  --rs-border-accent:  rgba(255,217,61,.30);
+
+  /* SEMANTIC */
+  --rs-success:        #22c55e;
+  --rs-error:          #ef4444;
+  --rs-hot:            #FF6B35;
+
+  /* BADGE PALETTES */
+  --rs-badge-novo-bg:  #22c55e;
+  --rs-badge-hot-bg:   #FF385C;
+  --rs-badge-top-bg:   #FFFFFF;
+  --rs-badge-excl-bg:  #FFD93D;
+
+  /* SIGNATURE GRADIENTS */
+  --rs-grad-hero:      linear-gradient(135deg, #FF385C 0%, #D50032 50%, #8B0000 100%);
+  --rs-grad-hero-2:    linear-gradient(135deg, #FF385C, #D50032);
+  --rs-grad-gold:      linear-gradient(135deg, #FFD93D, #FF9500);
+  --rs-grad-silver:    linear-gradient(135deg, #e0e0e0, #9e9e9e);
+  --rs-grad-purple:    linear-gradient(135deg, #667eea, #764ba2);
+  --rs-grad-violet:    linear-gradient(135deg, #a855f7, #6366f1);
+
+  /* POSTER GRADIENTS — placeholder covers by genre */
+  --rs-poster-romance:     linear-gradient(135deg,#FF385C,#D50032);
+  --rs-poster-romance-2:   linear-gradient(135deg,#fa709a,#fee140);
+  --rs-poster-romance-3:   linear-gradient(135deg,#f093fb,#f5576c);
+  --rs-poster-corporate:   linear-gradient(135deg,#667eea,#764ba2);
+  --rs-poster-corporate-2: linear-gradient(135deg,#a18cd1,#fbc2eb);
+  --rs-poster-suspense:    linear-gradient(135deg,#2d3561,#c05c7e);
+  --rs-poster-suspense-2:  linear-gradient(135deg,#434343,#000000);
+  --rs-poster-comedy:      linear-gradient(135deg,#43e97b,#38f9d7);
+  --rs-poster-comedy-2:    linear-gradient(135deg,#4facfe,#00f2fe);
+  --rs-poster-horror:      linear-gradient(135deg,#1a1a2e,#4a0e6b);
+  --rs-poster-horror-2:    linear-gradient(135deg,#3d0035,#9b0050);
+  --rs-poster-action:      linear-gradient(135deg,#0f0c29,#302b63);
+  --rs-poster-action-2:    linear-gradient(135deg,#0a3d62,#1e3799);
+
+  /* TYPOGRAPHY */
+  --rs-font-display: 'Playfair Display', Georgia, serif;
+  --rs-font-body:    'DM Sans', system-ui, -apple-system, sans-serif;
+
+  /* Display scale — Playfair 900 */
+  --rs-display-xl:  clamp(2.4rem, 5vw, 4.2rem);
+  --rs-display-lg:  clamp(2rem, 4vw, 3.2rem);
+  --rs-display-md:  1.8rem;
+  --rs-display-sm:  1.5rem;
+  --rs-display-xs:  1.3rem;
+
+  /* Body scale — DM Sans */
+  --rs-body-lg:     1rem;
+  --rs-body-md:     .92rem;
+  --rs-body-sm:     .85rem;
+  --rs-body-xs:     .78rem;
+  --rs-body-2xs:    .72rem;
+  --rs-body-3xs:    .65rem;
+
+  /* Weights */
+  --rs-w-regular: 400;
+  --rs-w-medium:  500;
+  --rs-w-bold:    700;
+  --rs-w-black:   900;
+
+  /* Tracking */
+  --rs-track-label: .6px;
+  --rs-track-loose: 1px;
+
+  /* Line heights */
+  --rs-lh-tight:   1.05;
+  --rs-lh-snug:    1.3;
+  --rs-lh-normal:  1.5;
+  --rs-lh-loose:   1.7;
+
+  /* RADII */
+  --rs-r-xs:   4px;
+  --rs-r-sm:   8px;
+  --rs-r-md:   12px;
+  --rs-r-lg:   14px;
+  --rs-r-xl:   16px;
+  --rs-r-2xl:  20px;
+  --rs-r-3xl:  24px;
+  --rs-r-pill: 50px;
+  --rs-r-full: 9999px;
+
+  /* SHADOWS */
+  --rs-shadow-sm:   0 2px 20px rgba(0,0,0,.5);
+  --rs-shadow-md:   0 4px 20px rgba(0,0,0,.5);
+  --rs-shadow-lg:   0 8px 30px rgba(0,0,0,.5);
+  --rs-shadow-xl:   0 20px 50px rgba(0,0,0,.7);
+  --rs-shadow-2xl:  0 30px 80px rgba(0,0,0,.6);
+  --rs-shadow-glow: 0 0 80px rgba(255,56,92,.4);
+  --rs-shadow-btn:  0 10px 25px rgba(255,56,92,.4);
+
+  /* MOTION */
+  --rs-ease:      cubic-bezier(.4,0,.2,1);
+  --rs-d-fast:    .15s;
+  --rs-d-base:    .2s;
+  --rs-d-slow:    .3s;
+  --rs-d-slower:  .6s;
+
+  /* SPACING */
+  --rs-s-1: 4px;  --rs-s-2: 8px;  --rs-s-3: 12px; --rs-s-4: 16px;
+  --rs-s-5: 20px; --rs-s-6: 24px; --rs-s-8: 32px; --rs-s-10: 40px;
+  --rs-s-12: 48px;
+
+  /* LAYOUT */
+  --rs-content-max: 1200px;
+  --rs-nav-h:       calc(72px + env(safe-area-inset-top, 0px));
+  --rs-edge-px:     4%;
+
+  /* Legacy aliases — mantém compatibilidade com CSS existente */
+  --primary:       var(--rs-primary);
+  --primary-dark:  var(--rs-primary-dark);
+  --secondary:     var(--rs-secondary);
+  --dark:          var(--rs-bg-warm);
+  --dark-light:    var(--rs-bg-cool-2);
+  --dark-card:     var(--rs-bg-cool-3);
+  --accent:        var(--rs-accent);
+  --text:          var(--rs-text);
+  --text-muted:    var(--rs-text-muted-2);
+  --gradient-hero: var(--rs-grad-hero);
+}
+
+/* SEMANTIC CLASSES */
+.rs-h1 { font-family:var(--rs-font-display); font-weight:var(--rs-w-black); font-size:var(--rs-display-xl); line-height:var(--rs-lh-tight); letter-spacing:-.01em; }
+.rs-h2 { font-family:var(--rs-font-display); font-weight:var(--rs-w-black); font-size:var(--rs-display-md); line-height:var(--rs-lh-snug); }
+.rs-h3 { font-family:var(--rs-font-display); font-weight:var(--rs-w-black); font-size:var(--rs-display-sm); }
+.rs-label { font-family:var(--rs-font-body); font-size:var(--rs-body-3xs); font-weight:var(--rs-w-bold); text-transform:uppercase; letter-spacing:var(--rs-track-label); color:var(--rs-text-muted); }
+.rs-price { font-family:var(--rs-font-display); font-weight:var(--rs-w-black); color:var(--rs-accent); }
+.rs-logo  { font-family:var(--rs-font-display); font-weight:var(--rs-w-black); letter-spacing:-.01em; }
+.rs-logo .accent { color:var(--rs-primary); }
+.rs-muted { color:var(--rs-text-muted); }

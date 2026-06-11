@@ -1,0 +1,80 @@
+'use client'
+import { useState, useEffect } from 'react'
+import { db } from '@/lib/firebase'
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
+import { DRAMAS as MOCK_DRAMAS } from '@/lib/mock'
+import type { Drama } from '@/types'
+
+// Normalize a Firestore doc into a Drama with correct id
+function fromFirestore(id: string, data: Record<string, any>): Drama {
+  return {
+    id,
+    title:       data.title       ?? '',
+    genre:       data.genre       ?? 'romance',
+    description: data.description ?? '',
+    short:       data.short       ?? '',
+    status:      data.status      ?? 'Ativo',
+    rating:      data.rating      ?? 0,
+    views:       data.views       ?? 0,
+    episodes:    data.episodes    ?? [],
+    posterGrad:  data.posterGrad  ?? 'var(--rs-poster-romance)',
+    posterImage:  data.posterImage  ?? undefined,
+    bannerImage:  data.bannerImage  ?? undefined,
+    badge:       data.badge       ?? undefined,
+    cast:        data.cast        ?? [],
+    year:        data.year        ?? new Date().getFullYear(),
+    icon:        data.icon        ?? '🎬',
+  } as Drama & { icon: string; short: string }
+}
+
+/* ── Load all active dramas ── */
+export function useDramas() {
+  const [dramas, setDramas]     = useState<(Drama & { icon:string })[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [isLive, setIsLive]     = useState(false)  // true = data came from Firestore
+
+  useEffect(() => {
+    getDocs(query(
+      collection(db, 'dramas'),
+      where('status', '==', 'Ativo'),
+    ))
+      .then(snap => {
+        if (!snap.empty) {
+          const list = snap.docs
+            .map(d => fromFirestore(d.id, d.data()) as Drama & { icon:string })
+            .sort((a, b) => a.title.localeCompare(b.title))
+          setDramas(list)
+          setIsLive(true)
+        }
+        // else keep mock data
+      })
+      .catch(() => {
+        // On error, fall back to mock data so page is not empty
+        setDramas(MOCK_DRAMAS as any)
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  return { dramas, loading, isLive }
+}
+
+/* ── Load a single drama by ID ── */
+export function useDrama(id: string) {
+  const [drama, setDrama]     = useState<(Drama & { icon:string }) | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!id) { setLoading(false); return }
+    getDoc(doc(db, 'dramas', id))
+      .then(snap => {
+        if (snap.exists()) {
+          setDrama(fromFirestore(snap.id, snap.data()) as Drama & { icon:string })
+        }
+        // else keep mock or null
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [id])
+
+  return { drama, loading }
+}
