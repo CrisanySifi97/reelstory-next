@@ -1,10 +1,13 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Search, Bell, Coins, X } from 'lucide-react'
+import { Search, Bell, Coins, X, BellOff, BellRing } from 'lucide-react'
 import { auth, db } from '@/lib/firebase'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, collection, getDocs, orderBy, query, limit } from 'firebase/firestore'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
+import { useFCM } from '@/lib/useFCM'
+
+interface NotifItem { id: string; title: string; body: string; url?: string; sentAt?: { seconds: number } }
 
 interface NavProps {
   transparent?: boolean
@@ -19,9 +22,14 @@ export default function Nav({ transparent = false, activeLink }: NavProps) {
   const [dropOpen, setDropOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [hover, setHover]       = useState<string | null>(null)
-  const [hasNotif, setHasNotif] = useState(true)
-  const [isPWA, setIsPWA]       = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifs, setNotifs]       = useState<NotifItem[]>([])
+  const [notifsLoaded, setNotifsLoaded] = useState(false)
+  const [isPWA, setIsPWA]         = useState(false)
+  const [fgToast, setFgToast]     = useState<NotifItem | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const notifRef  = useRef<HTMLDivElement>(null)
+  const { permission, requestPermission } = useFCM()
 
   useEffect(() => {
     const mq = window.matchMedia('(display-mode: standalone)')
@@ -52,6 +60,54 @@ export default function Nav({ transparent = false, activeLink }: NavProps) {
     })
     return unsub
   }, [])
+
+  const loadNotifs = useCallback(async () => {
+    if (notifsLoaded) return
+    try {
+      const snap = await getDocs(query(collection(db, 'notifications'), orderBy('sentAt', 'desc'), limit(20)))
+      setNotifs(snap.docs.map(d => ({ id: d.id, ...d.data() } as NotifItem)))
+    } catch {}
+    setNotifsLoaded(true)
+  }, [notifsLoaded])
+
+  // Load notifications when panel opens
+  useEffect(() => { if (notifOpen) loadNotifs() }, [notifOpen, loadNotifs])
+
+  // Close panel on outside click
+  useEffect(() => {
+    const fn = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false)
+    }
+    if (notifOpen) document.addEventListener('mousedown', fn)
+    return () => document.removeEventListener('mousedown', fn)
+  }, [notifOpen])
+
+  // Foreground FCM messages
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleMsg = async () => {
+      try {
+        const { getMessaging, onMessage } = await import('firebase/messaging')
+        const { getApps } = await import('firebase/app')
+        if (!getApps().length) return
+        const msg = getMessaging()
+        onMessage(msg, (payload) => {
+          const n: NotifItem = {
+            id: Date.now().toString(),
+            title: payload.notification?.title ?? '',
+            body:  payload.notification?.body  ?? '',
+            url:   (payload.data as any)?.url,
+          }
+          setFgToast(n)
+          setNotifs(prev => [n, ...prev])
+          setTimeout(() => setFgToast(null), 6000)
+        })
+      } catch {}
+    }
+    handleMsg()
+  }, [])
+
+  const hasUnread = notifs.length > 0 && permission === 'granted'
 
   const links = [
     { href: '/inicio',   label: 'Início'      },
@@ -134,13 +190,70 @@ export default function Nav({ transparent = false, activeLink }: NavProps) {
           />
         </div>
 
-        {/* Bell */}
-        <button className="nav-icon-btn"
-          onMouseEnter={() => setHover('bell')} onMouseLeave={() => setHover(null)}
-          style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', width: 34, height: 34, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', position: 'relative', transition: 'all .2s', flexShrink: 0 }}>
-          <Bell size={14}/>
-          {hasNotif && <span style={{ position:'absolute', top:6, right:6, width:7, height:7, borderRadius:'50%', background:'var(--rs-primary)', border:'1.5px solid #0e0e0e' }}/>}
-        </button>
+        {/* Bell + notification panel */}
+        <div ref={notifRef} style={{ position:'relative', flexShrink:0 }}>
+          <button className="nav-icon-btn"
+            onClick={() => setNotifOpen(v => !v)}
+            style={{ background: notifOpen ? 'rgba(255,56,92,.15)' : 'rgba(255,255,255,.04)', border: '1px solid ' + (notifOpen ? 'rgba(255,56,92,.4)' : 'rgba(255,255,255,.08)'), width: 34, height: 34, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', position: 'relative', transition: 'all .2s' }}>
+            <Bell size={14}/>
+            {hasUnread && <span style={{ position:'absolute', top:6, right:6, width:7, height:7, borderRadius:'50%', background:'var(--rs-primary)', border:'1.5px solid #0e0e0e' }}/>}
+          </button>
+
+          {notifOpen && (
+            <div style={{ position:'absolute', top:'calc(100% + 10px)', right:0, width:320, background:'rgba(18,18,30,.98)', border:'1px solid rgba(255,255,255,.1)', borderRadius:16, boxShadow:'0 16px 48px rgba(0,0,0,.6)', backdropFilter:'blur(20px)', zIndex:300, overflow:'hidden' }}>
+              {/* Header */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'.85rem 1rem .65rem', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+                <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'.92rem' }}>Notificações</div>
+                <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                  {permission !== 'granted' && (
+                    <button onClick={requestPermission} style={{ background:'rgba(255,56,92,.15)', border:'1px solid rgba(255,56,92,.35)', color:'var(--rs-primary)', borderRadius:8, padding:'.28rem .7rem', fontSize:'.72rem', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}>
+                      <BellRing size={11}/>Activar
+                    </button>
+                  )}
+                  {permission === 'granted' && (
+                    <span style={{ fontSize:'.7rem', color:'#22c55e', fontWeight:700, display:'flex', alignItems:'center', gap:3 }}><BellRing size={11}/>Activo</span>
+                  )}
+                  {permission === 'denied' && (
+                    <span style={{ fontSize:'.7rem', color:'#ef4444', fontWeight:700, display:'flex', alignItems:'center', gap:3 }}><BellOff size={11}/>Bloqueado</span>
+                  )}
+                  <button onClick={() => setNotifOpen(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,.4)', cursor:'pointer', display:'flex', padding:2 }}><X size={14}/></button>
+                </div>
+              </div>
+
+              {/* List */}
+              <div style={{ maxHeight:360, overflowY:'auto' }}>
+                {!notifsLoaded && <div style={{ textAlign:'center', padding:'2rem', color:'rgba(255,255,255,.3)', fontSize:'.82rem' }}>A carregar...</div>}
+                {notifsLoaded && notifs.length === 0 && (
+                  <div style={{ textAlign:'center', padding:'2.5rem 1rem', color:'rgba(255,255,255,.3)' }}>
+                    <Bell size={28} style={{ opacity:.3, marginBottom:8 }}/>
+                    <div style={{ fontSize:'.82rem' }}>Sem notificações ainda</div>
+                  </div>
+                )}
+                {notifs.map(n => (
+                  <a key={n.id} href={n.url || '/inicio'} onClick={() => setNotifOpen(false)}
+                    style={{ display:'block', padding:'.75rem 1rem', borderBottom:'1px solid rgba(255,255,255,.05)', textDecoration:'none', transition:'background .15s' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background='rgba(255,255,255,.04)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background=''}>
+                    <div style={{ display:'flex', gap:'.7rem', alignItems:'flex-start' }}>
+                      <div style={{ width:32, height:32, borderRadius:'50%', background:'var(--rs-grad-hero)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'.9rem' }}>🔔</div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:'.83rem', fontWeight:700, color:'#fff', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{n.title}</div>
+                        <div style={{ fontSize:'.76rem', color:'rgba(255,255,255,.55)', lineHeight:1.4, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{n.body}</div>
+                        {n.sentAt && <div style={{ fontSize:'.68rem', color:'rgba(255,255,255,.3)', marginTop:3 }}>{new Date(n.sentAt.seconds * 1000).toLocaleDateString('pt-AO', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</div>}
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+
+              {permission !== 'granted' && (
+                <div style={{ padding:'.75rem 1rem', borderTop:'1px solid rgba(255,255,255,.07)', fontSize:'.74rem', color:'rgba(255,255,255,.35)', textAlign:'center', lineHeight:1.5 }}>
+                  Activa as notificações para receber alertas de novos episódios
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Coins */}
         {coins !== null && (
@@ -195,6 +308,18 @@ export default function Nav({ transparent = false, activeLink }: NavProps) {
           </Link>
         )}
       </div>
+
+      {/* Foreground notification toast */}
+      {fgToast && (
+        <div style={{ position:'fixed', top:'calc(env(safe-area-inset-top,0px) + 80px)', right:'1rem', zIndex:9999, maxWidth:320, background:'rgba(18,18,30,.98)', border:'1px solid rgba(255,56,92,.3)', borderRadius:14, padding:'.9rem 1rem', boxShadow:'0 8px 30px rgba(0,0,0,.5)', backdropFilter:'blur(20px)', display:'flex', gap:'.75rem', alignItems:'flex-start', animation:'rs-slide-up .3s ease' }}>
+          <div style={{ width:36, height:36, borderRadius:'50%', background:'var(--rs-grad-hero)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'1rem' }}>🔔</div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:'.85rem', fontWeight:700, marginBottom:2 }}>{fgToast.title}</div>
+            <div style={{ fontSize:'.78rem', color:'rgba(255,255,255,.65)', lineHeight:1.4 }}>{fgToast.body}</div>
+          </div>
+          <button onClick={() => setFgToast(null)} style={{ background:'none', border:'none', color:'rgba(255,255,255,.4)', cursor:'pointer', display:'flex', flexShrink:0, padding:2 }}><X size={14}/></button>
+        </div>
+      )}
 
       <style>{`
         @media(max-width:768px) {
