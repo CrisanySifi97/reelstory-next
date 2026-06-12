@@ -38,7 +38,7 @@ type DramaForm = {
   status:Drama['status']; rating:string; badge:string
   year:string; cast:string; views:string; icon:string; posterGrad:string; posterImage:string; bannerImage:string
 }
-type EpForm = { title:string; ytId:string; free:boolean; order:number }
+type EpForm = { title:string; url:string; free:boolean; order:number }
 
 const GENRE_ICONS: Record<Drama['genre'], string[]> = {
   romance:     ['💕','❤️','💋','🌹','👯'],
@@ -68,7 +68,7 @@ const emptyForm = (): DramaForm => ({
   status:'Ativo', rating:'4.5', badge:'',
   year: String(new Date().getFullYear()), cast:'', views:'0', icon:'🎬', posterGrad:'linear-gradient(135deg,#FF385C,#D50032)', posterImage:'', bannerImage:'',
 })
-const emptyEp   = (n:number): EpForm => ({ title:'', ytId:'', free:n<=2, order:n })
+const emptyEp   = (n:number): EpForm => ({ title:'', url:'', free:n<=2, order:n })
 const GENRES = Object.keys(GENRE_LABELS) as Drama['genre'][]
 const fmt = (n:number) => n.toLocaleString('pt-AO')
 
@@ -90,7 +90,7 @@ export default function AdminPage() {
   const [editId, setEditId]     = useState<string|null>(null)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving]     = useState(false)
-  const [formEps, setFormEps]   = useState<{title:string;ytId:string;free:boolean}[]>([])
+  const [formEps, setFormEps]   = useState<{title:string;url:string;free:boolean}[]>([])
 
   const [epDrama, setEpDrama]   = useState<(Drama & {_id:string})|null>(null)
   const [epList, setEpList]     = useState<Episode[]>([])
@@ -105,7 +105,7 @@ export default function AdminPage() {
   // Episodes section
   const [epFilter, setEpFilter]     = useState('')
   const [inlineEp, setInlineEp]     = useState<{dramaId:string;epId:string}|null>(null)
-  const [inlineEpForm, setInlineEpForm] = useState({title:'',ytId:'',free:false})
+  const [inlineEpForm, setInlineEpForm] = useState({title:'',url:'',free:false})
 
   // Packages section
   const [pkgs, setPkgs]           = useState(POINTS_PACKAGES.map((p,i)=>({...p,_id:p.key})))
@@ -217,7 +217,7 @@ export default function AdminPage() {
   const saveInlineEp = async () => {
     if (!inlineEp) return
     const drama = dramas.find(d=>d._id===inlineEp.dramaId); if (!drama) return
-    const newEps = (drama.episodes||[]).map(e=>e.id===inlineEp.epId?{...e,...inlineEpForm,ytId:inlineEpForm.ytId.replace(/.*v=|youtu\.be\//,'').split('&')[0]}:e)
+    const newEps = (drama.episodes||[]).map(e=>e.id===inlineEp.epId?{...e,...inlineEpForm,url:inlineEpForm.url.trim()}:e)
     await updateDoc(doc(db,'dramas',inlineEp.dramaId),{episodes:newEps})
     setInlineEp(null); loadDramas(); showToast('Episódio guardado')
   }
@@ -314,8 +314,8 @@ export default function AdminPage() {
         cast:        form.cast ? form.cast.split(',').map(s=>s.trim()).filter(Boolean) : [],
       }
       const episodes: Episode[] = formEps
-        .filter(e=>e.title.trim()&&e.ytId.trim())
-        .map((e,i)=>({ id:Date.now().toString()+i, title:e.title.trim(), ytId:e.ytId.trim().replace(/.*v=|youtu\.be\//,'').split('&')[0], free:e.free, order:i+1 }))
+        .filter(e=>e.title.trim()&&e.url.trim())
+        .map((e,i)=>({ id:Date.now().toString()+i, title:e.title.trim(), url:e.url.trim(), free:e.free, order:i+1 }))
       if (editId) {
         await updateDoc(doc(db,'dramas',editId), { ...data, ...(episodes.length?{episodes}:{}) })
         showToast('Série actualizada')
@@ -334,10 +334,10 @@ export default function AdminPage() {
     setEpDrama(d); setEpList([...(d.episodes||[])].sort((a,b)=>a.order-b.order)); setEpForm(emptyEp((d.episodes?.length||0)+1))
   }
   const handleSaveEp = async () => {
-    if (!epDrama || !epForm.title.trim() || !epForm.ytId.trim()) return
+    if (!epDrama || !epForm.title.trim() || !epForm.url.trim()) return
     setEpSaving(true)
     try {
-      const newEp: Episode = { id:Date.now().toString(), title:epForm.title.trim(), ytId:epForm.ytId.trim().replace(/.*v=|youtu\.be\//,'').split('&')[0], free:epForm.free, order:epForm.order }
+      const newEp: Episode = { id:Date.now().toString(), title:epForm.title.trim(), url:epForm.url.trim(), free:epForm.free, order:epForm.order }
       const newList = [...epList, newEp].sort((a,b)=>a.order-b.order)
       await updateDoc(doc(db,'dramas',epDrama._id), { episodes:newList })
       setEpList(newList); setEpForm(emptyEp(newList.length+1)); showToast('Episódio adicionado'); loadDramas()
@@ -719,12 +719,12 @@ export default function AdminPage() {
                       {formEps.filter(e=>e.free).length > 0 && <span style={{ color:'#22c55e', marginLeft:6 }}>{formEps.filter(e=>e.free).length} grátis</span>}
                     </label>
                     <div style={{ display:'flex', gap:6 }}>
-                      <button type="button" onClick={()=>setFormEps(p=>[...p,{title:'',ytId:'',free:p.length<2}])}
+                      <button type="button" onClick={()=>setFormEps(p=>[...p,{title:'',url:'',free:p.length<2}])}
                         style={{ display:'flex', alignItems:'center', gap:4, background:'rgba(255,56,92,.15)', border:'1px solid rgba(255,56,92,.3)', color:'var(--rs-primary)', borderRadius:8, padding:'.3rem .75rem', fontSize:'.78rem', fontWeight:700, cursor:'pointer' }}>
                         <Plus size={13}/> Adicionar episódio
                       </button>
                       {formEps.length > 0 && (
-                        <button type="button" onClick={()=>setFormEps(p=>[...p,{title:'',ytId:'',free:false},{title:'',ytId:'',free:false},{title:'',ytId:'',free:false},{title:'',ytId:'',free:false},{title:'',ytId:'',free:false}])}
+                        <button type="button" onClick={()=>setFormEps(p=>[...p,{title:'',url:'',free:false},{title:'',url:'',free:false},{title:'',url:'',free:false},{title:'',url:'',free:false},{title:'',url:'',free:false}])}
                           style={{ display:'flex', alignItems:'center', gap:4, background:'rgba(255,255,255,.06)', border:'1px solid var(--rs-border-base)', color:'var(--rs-text-muted)', borderRadius:8, padding:'.3rem .75rem', fontSize:'.78rem', cursor:'pointer' }}>
                           +5 de uma vez
                         </button>
@@ -763,8 +763,8 @@ export default function AdminPage() {
                           {/* YT ID */}
                           <input
                             className="field-in"
-                            value={ep.ytId}
-                            onChange={e=>setFormEps(p=>p.map((x,j)=>j===i?{...x,ytId:e.target.value}:x))}
+                            value={ep.url}
+                            onChange={e=>setFormEps(p=>p.map((x,j)=>j===i?{...x,url:e.target.value}:x))}
                             placeholder="ID ou URL"
                             style={{ padding:'.45rem .7rem', fontFamily:'monospace', fontSize:'.78rem' }}
                           />
@@ -798,7 +798,7 @@ export default function AdminPage() {
                           Todos pagos
                         </button>
                         <span style={{ marginLeft:'auto', fontSize:'.75rem', color:'var(--rs-text-muted)', alignSelf:'center' }}>
-                          {formEps.filter(e=>e.title.trim()&&e.ytId.trim()).length}/{formEps.length} completos
+                          {formEps.filter(e=>e.title.trim()&&e.url.trim()).length}/{formEps.length} completos
                         </span>
                       </div>
                     </div>
@@ -807,7 +807,7 @@ export default function AdminPage() {
 
                 <div style={{ display:'flex', gap:8, alignItems:'center' }}>
                   <button onClick={handleSaveDrama} disabled={saving||!form.title.trim()} className="btn-primary" style={{ opacity:(saving||!form.title.trim())?.5:1 }}>
-                    <Save size={14}/>{saving?'A guardar...':editId?'Actualizar série':`Criar série${formEps.length>0?` + ${formEps.filter(e=>e.title.trim()&&e.ytId.trim()).length} eps`:''}`}
+                    <Save size={14}/>{saving?'A guardar...':editId?'Actualizar série':`Criar série${formEps.length>0?` + ${formEps.filter(e=>e.title.trim()&&e.url.trim()).length} eps`:''}`}
                   </button>
                   <button onClick={()=>{setShowForm(false);setEditId(null);setFormEps([])}} className="btn-ghost">Cancelar</button>
                   {editId && <span style={{ fontSize:'.75rem', color:'var(--rs-text-muted)', marginLeft:'auto' }}>A editar série existente</span>}
@@ -887,7 +887,7 @@ export default function AdminPage() {
               </div>
               <div className="card" style={{ padding:0, overflow:'hidden' }}>
                 <table>
-                  <thead><tr><th>Série</th><th>#</th><th>Título</th><th>YouTube ID</th><th>Grátis</th><th>Acções</th></tr></thead>
+                  <thead><tr><th>Série</th><th>#</th><th>Título</th><th>URL do Vídeo</th><th>Grátis</th><th>Acções</th></tr></thead>
                   <tbody>
                     {allEps.length===0
                       ? <tr><td colSpan={6} style={{ textAlign:'center', padding:'3rem', color:'var(--rs-text-muted)' }}>Nenhum episódio encontrado.</td></tr>
@@ -896,7 +896,7 @@ export default function AdminPage() {
                           <td style={{ color:'var(--rs-text-muted)', fontSize:'.78rem' }}>{ep.dramaTitle}</td>
                           <td style={{ color:'var(--rs-text-muted)' }}>{ep.order}</td>
                           <td><input className="field-in" value={inlineEpForm.title} onChange={e=>setInlineEpForm(p=>({...p,title:e.target.value}))} style={{ padding:'.35rem .6rem' }}/></td>
-                          <td><input className="field-in" value={inlineEpForm.ytId} onChange={e=>setInlineEpForm(p=>({...p,ytId:e.target.value}))} style={{ padding:'.35rem .6rem', fontFamily:'monospace', fontSize:'.8rem' }}/></td>
+                          <td><input className="field-in" value={inlineEpForm.url} onChange={e=>setInlineEpForm(p=>({...p,url:e.target.value}))} placeholder="https://res.cloudinary.com/..." style={{ padding:'.35rem .6rem', fontFamily:'monospace', fontSize:'.8rem' }}/></td>
                           <td><label style={{ display:'flex', alignItems:'center', gap:4, cursor:'pointer' }}><input type="checkbox" checked={inlineEpForm.free} onChange={e=>setInlineEpForm(p=>({...p,free:e.target.checked}))} style={{ accentColor:'var(--rs-primary)' }}/><span style={{ fontSize:'.78rem', color:inlineEpForm.free?'#22c55e':'var(--rs-text-muted)' }}>{inlineEpForm.free?'Sim':'Não'}</span></label></td>
                           <td><div style={{ display:'flex', gap:5 }}>
                             <button onClick={saveInlineEp} className="act-btn" style={{ background:'rgba(34,197,94,.15)', color:'#22c55e', width:'auto', padding:'0 .6rem', gap:4, fontSize:'.75rem', fontWeight:700 }}><Save size={11}/>Guardar</button>
@@ -908,10 +908,10 @@ export default function AdminPage() {
                           <td><div style={{ display:'flex', alignItems:'center', gap:'.5rem' }}><span style={{ width:28, height:38, borderRadius:4, background:ep.posterGrad||'var(--rs-poster-romance)', display:'inline-block', flexShrink:0 }}/><span style={{ fontSize:'.83rem', fontWeight:600 }}>{ep.dramaTitle}</span></div></td>
                           <td style={{ color:'var(--rs-text-muted)', fontWeight:700 }}>{ep.order}</td>
                           <td style={{ fontWeight:500 }}>{ep.title}</td>
-                          <td><a href={`https://youtu.be/${ep.ytId}`} target="_blank" rel="noopener" style={{ color:'#3b82f6', fontFamily:'monospace', fontSize:'.8rem', textDecoration:'none' }}>{ep.ytId}</a></td>
+                          <td><a href={ep.url||ep.ytId||'#'} target="_blank" rel="noopener" style={{ color:'#3b82f6', fontFamily:'monospace', fontSize:'.75rem', textDecoration:'none', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', display:'block', whiteSpace:'nowrap' }}>{ep.url ? ep.url.split('/').slice(-2).join('/') : (ep.ytId||'—')}</a></td>
                           <td>{ep.free ? <span className="badge b-green">Grátis</span> : <span style={{ color:'var(--rs-text-muted)', fontSize:'.78rem' }}>Pago</span>}</td>
                           <td><div style={{ display:'flex', gap:5 }}>
-                            <button onClick={()=>{setInlineEp({dramaId:ep.dramaId,epId:ep.id||''}); setInlineEpForm({title:ep.title,ytId:ep.ytId??'',free:ep.free})}} className="act-btn"><Edit2 size={13}/></button>
+                            <button onClick={()=>{setInlineEp({dramaId:ep.dramaId,epId:ep.id||''}); setInlineEpForm({title:ep.title,url:ep.url??ep.ytId??'',free:ep.free})}} className="act-btn"><Edit2 size={13}/></button>
                             <button onClick={()=>deleteEpFromDrama(ep.dramaId,ep.id||'')} className="act-btn" style={{ background:'rgba(239,68,68,.12)', color:'#ef4444' }}><Trash2 size={13}/></button>
                           </div></td>
                         </tr>
@@ -1571,11 +1571,11 @@ export default function AdminPage() {
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontSize:'.85rem', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{ep.title}</div>
                   <div style={{ fontSize:'.72rem', color:'var(--rs-text-muted)', display:'flex', gap:'.5rem', marginTop:2 }}>
-                    <span style={{ fontFamily:'monospace' }}>{ep.ytId}</span>
+                    <span style={{ fontFamily:'monospace', fontSize:'.7rem' }}>{ep.url ? ep.url.split('/').slice(-2).join('/') : (ep.ytId||'—')}</span>
                     {ep.free && <span style={{ color:'#22c55e', fontWeight:700 }}>GRÃTIS</span>}
                   </div>
                 </div>
-                <a href={`https://youtu.be/${ep.ytId}`} target="_blank" rel="noopener" style={{ color:'var(--rs-text-muted)', display:'flex' }}><PlayCircle size={16}/></a>
+                {(ep.url||ep.ytId) && <a href={ep.url||`https://youtu.be/${ep.ytId}`} target="_blank" rel="noopener" style={{ color:'var(--rs-text-muted)', display:'flex' }}><PlayCircle size={16}/></a>}
                 <button onClick={()=>handleDeleteEp(i)} className="act-btn" style={{ background:'rgba(239,68,68,.12)', color:'#ef4444', flexShrink:0 }}><Trash2 size={12}/></button>
               </div>
             ))}
@@ -1584,7 +1584,7 @@ export default function AdminPage() {
             <div style={{ fontSize:'.72rem', color:'var(--rs-text-muted)', fontWeight:700, textTransform:'uppercase', letterSpacing:'.5px', marginBottom:'.6rem' }}>Adicionar episódio</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
               <div><label className="field-lbl">Título</label><input className="field-in" value={epForm.title} onChange={e=>setEpForm(p=>({...p,title:e.target.value}))} placeholder="Ex: O Encontro"/></div>
-              <div><label className="field-lbl">YouTube ID ou URL</label><input className="field-in" value={epForm.ytId} onChange={e=>setEpForm(p=>({...p,ytId:e.target.value}))} placeholder="dQw4w9WgXcQ"/></div>
+              <div><label className="field-lbl">URL Cloudinary</label><input className="field-in" value={epForm.url} onChange={e=>setEpForm(p=>({...p,url:e.target.value}))} placeholder="https://res.cloudinary.com/..."/></div>
               <div><label className="field-lbl">NÂº Episódio</label><input className="field-in" type="number" min={1} value={epForm.order} onChange={e=>setEpForm(p=>({...p,order:parseInt(e.target.value)||1}))}/></div>
               <div style={{ display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
                 <label style={{ display:'flex', alignItems:'center', gap:'.5rem', cursor:'pointer', padding:'.55rem .85rem', background:'rgba(255,255,255,.04)', borderRadius:8, border:'1px solid var(--rs-border-base)' }}>
@@ -1593,7 +1593,7 @@ export default function AdminPage() {
                 </label>
               </div>
             </div>
-            <button onClick={handleSaveEp} disabled={epSaving||!epForm.title.trim()||!epForm.ytId.trim()} className="btn-primary" style={{ opacity:(epSaving||!epForm.title.trim()||!epForm.ytId.trim())?.5:1 }}>
+            <button onClick={handleSaveEp} disabled={epSaving||!epForm.title.trim()||!epForm.url.trim()} className="btn-primary" style={{ opacity:(epSaving||!epForm.title.trim()||!epForm.url.trim())?.5:1 }}>
               <Plus size={14}/>{epSaving?'A guardar...':'Adicionar episódio'}
             </button>
           </div>
