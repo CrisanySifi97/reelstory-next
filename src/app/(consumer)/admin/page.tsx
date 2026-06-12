@@ -719,7 +719,7 @@ export default function AdminPage() {
                     images={form.posterImage ? [form.posterImage] : []}
                     onAdd={url => setForm(f=>({...f, posterImage:url}))}
                     onRemove={() => setForm(f=>({...f, posterImage:''}))}
-                    folder="series/posters" single label="Upload da capa (formato vertical 2:3, ex: 600×900px)"
+                    folder="banners" browseFolder="banners" single label="Upload da capa (formato vertical 2:3, ex: 600×900px)"
                   />
                 </div>
 
@@ -729,7 +729,7 @@ export default function AdminPage() {
                     images={form.bannerImage ? [form.bannerImage] : []}
                     onAdd={url => setForm(f=>({...f, bannerImage:url}))}
                     onRemove={() => setForm(f=>({...f, bannerImage:''}))}
-                    folder="series/banners" single label="Upload do banner da série (aparece na página de detalhe)"
+                    folder="banners" browseFolder="banners" single label="Upload do banner da série (aparece na página de detalhe)"
                   />
                 </div>
 
@@ -1395,7 +1395,7 @@ export default function AdminPage() {
                           images={bLanding.heroImage ? [bLanding.heroImage] : []}
                           onAdd={url=>setBLanding(p=>({...p,heroImage:url}))}
                           onRemove={()=>setBLanding(p=>({...p,heroImage:undefined}))}
-                          folder="banners/landing" single label="Upload imagem para o telemóvel"
+                          folder="banners" browseFolder="banners" single label="Upload imagem para o telemóvel"
                         />
                       </div>
                       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
@@ -1471,7 +1471,7 @@ export default function AdminPage() {
                           images={bLogin.images||[]}
                           onAdd={url=>setBLogin(p=>({...p,images:[...(p.images||[]),url]}))}
                           onRemove={url=>setBLogin(p=>({...p,images:(p.images||[]).filter(u=>u!==url)}))}
-                          folder="banners/login" label="Upload poster para o painel"
+                          folder="banners" browseFolder="banners" label="Upload poster para o painel"
                           maxImages={30}
                         />
                       </div>
@@ -1526,7 +1526,7 @@ export default function AdminPage() {
                           images={bInicio.heroImage ? [bInicio.heroImage] : []}
                           onAdd={url=>setBInicio(p=>({...p,heroImage:url}))}
                           onRemove={()=>setBInicio(p=>({...p,heroImage:undefined}))}
-                          folder="banners/inicio" single label="Upload imagem hero"
+                          folder="banners" browseFolder="banners" single label="Upload imagem hero"
                         />
                       </div>
                       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'.65rem .85rem', background:'var(--rs-bg-cool-3)', borderRadius:10, border:'1px solid var(--rs-border-soft)' }}>
@@ -1587,7 +1587,7 @@ export default function AdminPage() {
                           images={bExplorar.bannerImage ? [bExplorar.bannerImage] : []}
                           onAdd={url=>setBExplorar(p=>({...p,bannerImage:url}))}
                           onRemove={()=>setBExplorar(p=>({...p,bannerImage:undefined}))}
-                          folder="banners/explorar" single label="Upload imagem do banner"
+                          folder="banners" browseFolder="banners" single label="Upload imagem do banner"
                         />
                       </div>
                       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'.65rem .85rem', background:'var(--rs-bg-cool-3)', borderRadius:10, border:'1px solid var(--rs-border-soft)' }}>
