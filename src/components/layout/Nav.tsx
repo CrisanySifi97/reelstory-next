@@ -61,6 +61,17 @@ export default function Nav({ transparent = false, activeLink }: NavProps) {
     return unsub
   }, [])
 
+  // Auto-request FCM permission 8s after login if not yet asked
+  useEffect(() => {
+    if (permission !== 'default') return
+    const unsub = onAuthStateChanged(auth, user => {
+      if (!user) return
+      setTimeout(() => requestPermission().catch(() => {}), 8000)
+    })
+    return unsub
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permission])
+
   const loadNotifs = useCallback(async () => {
     if (notifsLoaded) return
     try {
