@@ -169,7 +169,21 @@ export default function AdminPage() {
   const loadDramas = async () => {
     try {
       const snap = await getDocs(query(collection(db,'dramas'), orderBy('title')))
-      setDramas(snap.docs.map(d => ({ _id:d.id, ...d.data() } as Drama & {_id:string})))
+      setDramas(snap.docs.map(d => {
+        const data = d.data()
+        return {
+          _id: d.id,
+          ...data,
+          description: data.description || data.desc || '',
+          posterGrad:  data.posterGrad  || data.grad  || 'linear-gradient(135deg,#FF385C,#D50032)',
+          genre:       (data.genre?.toLowerCase() || 'romance') as Drama['genre'],
+          icon:        data.icon || '🎬',
+          status:      data.status || 'Ativo',
+          rating:      data.rating ?? 0,
+          views:       data.views  ?? 0,
+          episodes:    data.episodes ?? [],
+        } as Drama & {_id:string}
+      }))
     } catch { setDramas(MOCK_DRAMAS.map(d => ({ ...d, _id:d.id })) as (Drama & {_id:string})[]) }
   }
   const loadUsers = async () => {
@@ -832,7 +846,27 @@ export default function AdminPage() {
                       <td style={{ color:'var(--rs-text-muted)' }}>{d.episodes?.length||0}</td>
                       <td><div style={{ display:'flex', gap:5 }}>
                         <button title="Episódios" onClick={()=>openEpisodes(d)} className="act-btn" style={{ background:'rgba(59,130,246,.15)', color:'#3b82f6' }}><List size={13}/></button>
-                        <button title="Editar" onClick={()=>{ setForm({title:d.title,genre:d.genre,description:d.description,short:(d as any).short||'',status:d.status,rating:String(d.rating),badge:d.badge||'',year:String((d as any).year||new Date().getFullYear()),cast:((d as any).cast||[]).join(', '),views:String(d.views||0),icon:(d as any).icon||'ðŸŽ¬',posterGrad:d.posterGrad||'',posterImage:(d as any).posterImage||'',bannerImage:(d as any).bannerImage||''}); setEditId(d._id); setShowForm(true) }} className="act-btn"><Edit2 size={13}/></button>
+                        <button title="Editar" onClick={()=>{
+                          const dd = d as any
+                          setForm({
+                            title:       d.title || '',
+                            genre:       (d.genre?.toLowerCase() as Drama['genre']) || 'romance',
+                            description: d.description || dd.desc || '',
+                            short:       dd.short || '',
+                            status:      d.status || 'Ativo',
+                            rating:      String(d.rating ?? 4.5),
+                            badge:       d.badge || '',
+                            year:        String(dd.year || new Date().getFullYear()),
+                            cast:        (dd.cast||[]).join(', '),
+                            views:       String(d.views || 0),
+                            icon:        dd.icon || '🎬',
+                            posterGrad:  d.posterGrad || dd.grad || '',
+                            posterImage: dd.posterImage || '',
+                            bannerImage: dd.bannerImage || '',
+                          })
+                          setEditId(d._id)
+                          setShowForm(true)
+                        }} className="act-btn"><Edit2 size={13}/></button>
                         <button title="Eliminar" onClick={()=>handleDelete(d._id,d.title)} className="act-btn" style={{ background:'rgba(239,68,68,.12)', color:'#ef4444' }}><Trash2 size={13}/></button>
                       </div></td>
                     </tr>
