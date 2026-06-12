@@ -620,9 +620,10 @@ export default function AdminPage() {
           {/* â•â• SÉRIES â•â• */}
           {section==='series' && (<>
             {showForm && (
-              <div className="card" style={{ marginBottom:'1.2rem', border:'1px solid var(--rs-border-strong)' }}>
+              <div className="modal-bg" onClick={()=>{setShowForm(false);setEditId(null);setFormEps([])}}>
+              <div className="modal-box" style={{ maxWidth:780, maxHeight:'90vh', overflowY:'auto' }} onClick={e=>e.stopPropagation()}>
                 {/* Header */}
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.2rem' }}>
+                <div className="modal-hd">
                   <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1.1rem' }}>{editId?'Editar Série':'Nova Série'}</div>
                   <button onClick={()=>{setShowForm(false);setEditId(null);setFormEps([])}} style={{ background:'none', border:'none', color:'var(--rs-text-muted)', cursor:'pointer', display:'flex' }}><X size={18}/></button>
                 </div>
@@ -826,6 +827,7 @@ export default function AdminPage() {
                   <button onClick={()=>{setShowForm(false);setEditId(null);setFormEps([])}} className="btn-ghost">Cancelar</button>
                   {editId && <span style={{ fontSize:'.75rem', color:'var(--rs-text-muted)', marginLeft:'auto' }}>A editar série existente</span>}
                 </div>
+              </div>
               </div>
             )}
             <div className="card" style={{ padding:0, overflow:'hidden' }}>
