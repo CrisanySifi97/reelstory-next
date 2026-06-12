@@ -397,7 +397,24 @@ export default function AdminPage() {
   }
   const showToast = (msg:string) => { setToast(msg); setTimeout(()=>setToast(''),2800) }
 
-  const filteredDramas  = dramas.filter(d=>d.title.toLowerCase().includes(search.toLowerCase()))
+  const [dramaSort, setDramaSort] = useState<'title'|'episodes'|'rating'|'views'|'status'|'createdAt'>('title')
+  const [dramaSortDir, setDramaSortDir] = useState<'asc'|'desc'>('asc')
+  const toggleSort = (col: typeof dramaSort) => {
+    if (dramaSort === col) setDramaSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setDramaSort(col); setDramaSortDir('asc') }
+  }
+  const filteredDramas = dramas
+    .filter(d => d.title.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      const dir = dramaSortDir === 'asc' ? 1 : -1
+      if (dramaSort === 'title')    return dir * a.title.localeCompare(b.title)
+      if (dramaSort === 'episodes') return dir * ((a.episodes?.length||0) - (b.episodes?.length||0))
+      if (dramaSort === 'rating')   return dir * ((a.rating||0) - (b.rating||0))
+      if (dramaSort === 'views')    return dir * ((a.views||0) - (b.views||0))
+      if (dramaSort === 'status')   return dir * a.status.localeCompare(b.status)
+      if (dramaSort === 'createdAt') return dir * ((a as any).createdAt?.seconds||0) - ((b as any).createdAt?.seconds||0)
+      return 0
+    })
   const filteredUsers   = users.filter(u=>(u.name||'').toLowerCase().includes(search.toLowerCase())||u.email.toLowerCase().includes(search.toLowerCase()))
   const filteredOrders  = orders.filter(o=>(o.userName||'').toLowerCase().includes(search.toLowerCase())||(o.package||'').toLowerCase().includes(search.toLowerCase()))
   const approvedOrders  = orders.filter(o=>o.status==='Aprovado')
@@ -830,9 +847,31 @@ export default function AdminPage() {
               </div>
               </div>
             )}
+            {/* Filtros e info de ordenação */}
+            <div style={{ display:'flex', gap:8, marginBottom:10, flexWrap:'wrap', alignItems:'center' }}>
+              {(['Ativo','Rascunho','Pausado'] as const).map(s=>(
+                <button key={s}
+                  onClick={()=>setSearch(search===s?'':s)}
+                  style={{ background:search===s?'rgba(255,56,92,.2)':'rgba(255,255,255,.06)', border:`1px solid ${search===s?'var(--rs-primary)':'var(--rs-border-base)'}`, color:search===s?'var(--rs-primary)':'var(--rs-text-muted)', borderRadius:20, padding:'.28rem .8rem', fontSize:'.78rem', fontWeight:700, cursor:'pointer' }}>
+                  {s} ({dramas.filter(d=>d.status===s).length})
+                </button>
+              ))}
+              <span style={{ marginLeft:'auto', fontSize:'.76rem', color:'var(--rs-text-muted)' }}>
+                {filteredDramas.length}/{dramas.length} · ordenado por <b style={{ color:'var(--rs-text)' }}>{({title:'Título',episodes:'Episódios',rating:'Rating',views:'Views',status:'Status',createdAt:'Data'} as any)[dramaSort]}</b> {dramaSortDir==='asc'?'↑':'↓'}
+              </span>
+            </div>
             <div className="card" style={{ padding:0, overflow:'hidden' }}>
               <table>
-                <thead><tr><th>Série</th><th>Género</th><th>Status</th><th>Rating</th><th>Eps</th><th>Acções</th></tr></thead>
+                <thead><tr>
+                  {([
+                    ['title','Série'],['status','Status'],['rating','Rating'],['views','Views'],['episodes','Eps'],
+                  ] as [typeof dramaSort, string][]).map(([col,label])=>(
+                    <th key={col} onClick={()=>toggleSort(col)} style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }}>
+                      {label} {dramaSort===col ? (dramaSortDir==='asc'?'↑':'↓') : <span style={{ opacity:.3 }}>↕</span>}
+                    </th>
+                  ))}
+                  <th>Acções</th>
+                </tr></thead>
                 <tbody>
                   {(filteredDramas.length>0?filteredDramas:MOCK_DRAMAS.map(d=>({...d,_id:d.id})) as (Drama&{_id:string})[]).map((d,i)=>(
                     <tr key={d._id||i}>
@@ -842,9 +881,9 @@ export default function AdminPage() {
                           <div><div style={{ fontSize:'.85rem', fontWeight:700 }}>{d.title}</div><div style={{ fontSize:'.7rem', color:'var(--rs-text-muted)' }}>{(d.description||'').slice(0,40)}{(d.description?.length||0)>40?'...':''}</div></div>
                         </div>
                       </td>
-                      <td style={{ color:'var(--rs-text-muted)' }}>{GENRE_LABELS[d.genre]}</td>
                       <td>{statusBadge(d.status)}</td>
-                      <td className="gold">â˜… {d.rating}</td>
+                      <td className="gold">★ {d.rating?.toFixed(1)}</td>
+                      <td style={{ color:'var(--rs-text-muted)', fontSize:'.82rem' }}>{fmt(d.views||0)}</td>
                       <td style={{ color:'var(--rs-text-muted)' }}>{d.episodes?.length||0}</td>
                       <td><div style={{ display:'flex', gap:5 }}>
                         <button title="Episódios" onClick={()=>openEpisodes(d)} className="act-btn" style={{ background:'rgba(59,130,246,.15)', color:'#3b82f6' }}><List size={13}/></button>
