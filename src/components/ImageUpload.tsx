@@ -1,6 +1,7 @@
 ﻿'use client'
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { Upload, X, Search, Grid, RefreshCw } from 'lucide-react'
+import { auth } from '@/lib/firebase'
 
 const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME    ?? ''
 const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? ''
@@ -50,7 +51,10 @@ function CloudinaryBrowser({ folder, onSelect, onClose }: {
       const params = new URLSearchParams({ type: 'image', max: '80' })
       if (folder) params.set('folder', folder)
       if (cursor) params.set('next_cursor', cursor)
-      const res  = await fetch(`/api/cloudinary-browse?${params}`)
+      const idToken = await auth.currentUser?.getIdToken()
+      const res  = await fetch(`/api/cloudinary-browse?${params}`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro ao carregar')
       setAssets(prev => cursor ? [...prev, ...data.assets] : data.assets)

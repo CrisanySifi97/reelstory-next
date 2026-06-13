@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAdmin } from '@/lib/verifyAdmin'
 
 const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? ''
 const API_KEY    = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY    ?? ''
@@ -7,6 +8,10 @@ const API_SECRET = process.env.CLOUDINARY_API_SECRET             ?? ''
 export async function GET(req: NextRequest) {
   if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
     return NextResponse.json({ error: 'Cloudinary não configurado' }, { status: 500 })
+  }
+
+  if (!(await verifyAdmin(req))) {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
   const { searchParams } = new URL(req.url)

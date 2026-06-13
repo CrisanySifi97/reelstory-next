@@ -282,9 +282,10 @@ export default function AdminPage() {
     setNotifSending(true)
     try {
       // Call server-side API to send via FCM
+      const idToken = await auth.currentUser?.getIdToken()
       const res = await fetch('/api/send-notification', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
         body: JSON.stringify(notifForm),
       })
       const data = await res.json()

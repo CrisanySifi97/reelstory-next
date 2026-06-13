@@ -338,7 +338,13 @@ function FeedContent() {
     setUnlocked(prev => new Set([...prev, key]))
     setShowNoPoints(false)
     videoRef.current?.play().catch(() => {})
-    updateDoc(doc(db, 'users', uid), { coins: newCoins, unlockedEpisodes: arrayUnion(key) }).catch(() => {})
+    updateDoc(doc(db, 'users', uid), { coins: newCoins, unlockedEpisodes: arrayUnion(key) }).catch(() => {
+      // Persist failed — roll back the optimistic unlock so the user isn't charged for nothing
+      setCoins(coins)
+      setUnlocked(prev => { const next = new Set(prev); next.delete(key); return next })
+      setShowNoPoints(true)
+      videoRef.current?.pause()
+    })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx, uid, unlocked])
 

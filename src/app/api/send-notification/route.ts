@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import admin from '@/lib/firebaseAdmin'
 import { getFirestore } from 'firebase-admin/firestore'
+import { verifyAdmin } from '@/lib/verifyAdmin'
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,6 +11,10 @@ export async function POST(req: NextRequest) {
         { error: 'Firebase Admin não configurado. Adiciona as variáveis FIREBASE_ADMIN_* no Vercel.' },
         { status: 503 }
       )
+    }
+
+    if (!(await verifyAdmin(req))) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
     const { title, body, url, tokens: manualTokens } = await req.json()
@@ -68,12 +73,13 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Remove invalid tokens from Firestore
-    if (invalidTokens.length) {
+    // Remove invalid tokens from Firestore (Firestore 'in' queries cap at 30 values)
+    const IN_LIMIT = 30
+    for (let i = 0; i < invalidTokens.length; i += IN_LIMIT) {
+      const chunk = invalidTokens.slice(i, i + IN_LIMIT)
+      const snap = await db.collection('users').where('fcmToken', 'in', chunk).get()
+      if (snap.empty) continue
       const batch = db.batch()
-      const snap = await db.collection('users')
-        .where('fcmToken', 'in', invalidTokens.slice(0, 30))
-        .get()
       snap.docs.forEach(d => batch.update(d.ref, { fcmToken: '' }))
       await batch.commit()
     }
