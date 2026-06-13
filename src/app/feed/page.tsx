@@ -176,7 +176,7 @@ function FeedContent() {
   // playback
   const [currentIdx, setCurrentIdx]     = useState(startEp)
   const [playing, setPlaying]           = useState(true)
-  const [muted, setMuted]               = useState(false)
+  const [muted, setMuted]               = useState(true)
   const [tapIcon, setTapIcon]           = useState<'play'|'pause'|null>(null)
   const [progress, setProgress]         = useState(0)
   const [currentTime, setCurrentTime]   = useState('0:00')
@@ -222,15 +222,13 @@ function FeedContent() {
 
   /* ── Video playback ── */
   // Browsers block autoplay-with-sound outside a direct user gesture (e.g. after
-  // scrolling to a new episode). Start muted — always allowed — then restore sound.
+  // scrolling to a new episode). Start muted — always allowed — the onPlay handler
+  // unmutes once playback has actually begun, which browsers permit.
   const tryPlay = () => {
     const v = videoRef.current
     if (!v) return
-    const wantSound = !muted
     v.muted = true
-    v.play().then(() => {
-      if (wantSound) v.muted = false
-    }).catch(() => {})
+    v.play().catch(() => {})
   }
 
   const handleTap = () => {
@@ -275,7 +273,7 @@ function FeedContent() {
     setCurrentTime('0:00')
     setTotalTime('0:00')
     setPlaying(true)
-    setMuted(false)
+    setMuted(true)
     const ep = episodes[currentIdx]
     const hasVideo = ep && !!(ep.url || ep.ytId)
     if (!hasVideo) {
@@ -474,7 +472,7 @@ function FeedContent() {
                     muted={muted}
                     preload="auto"
                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', background: '#000', zIndex: 1 }}
-                    onPlay={() => setPlaying(true)}
+                    onPlay={() => { setPlaying(true); setMuted(false) }}
                     onPause={() => setPlaying(false)}
                     onEnded={() => {
                       const nextIdx = currentIdx + 1
