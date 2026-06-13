@@ -222,8 +222,8 @@ function FeedContent() {
 
   /* ── Video playback ── */
   // Browsers block autoplay-with-sound outside a direct user gesture (e.g. after
-  // scrolling to a new episode). Start muted — always allowed — the onPlay handler
-  // unmutes once playback has actually begun, which browsers permit.
+  // scrolling to a new episode), and will pause an autoplaying video again if it's
+  // unmuted programmatically. Stay muted until the user taps the sound button.
   const tryPlay = () => {
     const v = videoRef.current
     if (!v) return
@@ -472,7 +472,7 @@ function FeedContent() {
                     muted={muted}
                     preload="auto"
                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', background: '#000', zIndex: 1 }}
-                    onPlay={() => { setPlaying(true); setMuted(false) }}
+                    onPlay={() => setPlaying(true)}
                     onPause={() => setPlaying(false)}
                     onEnded={() => {
                       const nextIdx = currentIdx + 1
