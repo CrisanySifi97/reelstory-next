@@ -221,6 +221,18 @@ function FeedContent() {
   }
 
   /* ── Video playback ── */
+  // Browsers block autoplay-with-sound outside a direct user gesture (e.g. after
+  // scrolling to a new episode). Start muted — always allowed — then restore sound.
+  const tryPlay = () => {
+    const v = videoRef.current
+    if (!v) return
+    const wantSound = !muted
+    v.muted = true
+    v.play().then(() => {
+      if (wantSound) v.muted = false
+    }).catch(() => {})
+  }
+
   const handleTap = () => {
     const v = videoRef.current
     if (!v) return
@@ -304,15 +316,16 @@ function FeedContent() {
     if (showNoPoints) {
       videoRef.current?.pause()
     } else {
-      videoRef.current?.play().catch(() => {})
+      tryPlay()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showNoPoints])
 
   /* ── Auto-play when episode changes and is accessible ── */
   useEffect(() => {
     if (showNoPoints) return
     const v = videoRef.current
-    if (v && v.paused) v.play().catch(() => {})
+    if (v && v.paused) tryPlay()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx])
 
@@ -323,7 +336,7 @@ function FeedContent() {
     // Episode is free or already unlocked — hide any block sheet and allow playback
     if (ep.free || isUnlocked(ep)) {
       setShowNoPoints(false)
-      videoRef.current?.play().catch(() => {})
+      tryPlay()
       return
     }
     if (!uid) return
@@ -337,7 +350,7 @@ function FeedContent() {
     setCoins(newCoins)
     setUnlocked(prev => new Set([...prev, key]))
     setShowNoPoints(false)
-    videoRef.current?.play().catch(() => {})
+    tryPlay()
     updateDoc(doc(db, 'users', uid), { coins: newCoins, unlockedEpisodes: arrayUnion(key) }).catch(() => {
       // Persist failed — roll back the optimistic unlock so the user isn't charged for nothing
       setCoins(coins)
