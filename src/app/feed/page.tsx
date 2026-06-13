@@ -377,20 +377,6 @@ function FeedContent() {
 
   const currentEp = episodes[currentIdx] as EpisodeWithId | undefined
 
-  // Loading / not found guard
-  if (dramaLoading) return (
-    <div style={{ position:'fixed', inset:0, background:'#000', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontFamily:'var(--rs-font-body)' }}>
-      <div style={{ width:40, height:40, border:'3px solid rgba(255,255,255,.15)', borderTopColor:'var(--rs-primary)', borderRadius:'50%', animation:'spin .8s linear infinite' }} />
-    </div>
-  )
-  if (!drama) return (
-    <div style={{ position:'fixed', inset:0, background:'#000', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'1rem', color:'#fff', fontFamily:'var(--rs-font-body)' }}>
-      <span style={{ fontSize:'2rem' }}>⚠️</span>
-      <p>Série não encontrada</p>
-      <button onClick={() => router.back()} style={{ background:'var(--rs-primary)', border:'none', color:'#fff', padding:'.6rem 1.4rem', borderRadius:50, cursor:'pointer', fontWeight:700 }}>Voltar</button>
-    </div>
-  )
-
   // ── Auto-hide UI after 3s ──────────────────────────────────────────────────
   const [uiVisible, setUiVisible] = useState(true)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -406,6 +392,20 @@ function FeedContent() {
     return () => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx])
+
+  // Loading / not found guard
+  if (dramaLoading) return (
+    <div style={{ position:'fixed', inset:0, background:'#000', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontFamily:'var(--rs-font-body)' }}>
+      <div style={{ width:40, height:40, border:'3px solid rgba(255,255,255,.15)', borderTopColor:'var(--rs-primary)', borderRadius:'50%', animation:'spin .8s linear infinite' }} />
+    </div>
+  )
+  if (!drama) return (
+    <div style={{ position:'fixed', inset:0, background:'#000', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'1rem', color:'#fff', fontFamily:'var(--rs-font-body)' }}>
+      <span style={{ fontSize:'2rem' }}>⚠️</span>
+      <p>Série não encontrada</p>
+      <button onClick={() => router.back()} style={{ background:'var(--rs-primary)', border:'none', color:'#fff', padding:'.6rem 1.4rem', borderRadius:50, cursor:'pointer', fontWeight:700 }}>Voltar</button>
+    </div>
+  )
 
   return (
     <div

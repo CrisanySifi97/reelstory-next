@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ────────────────────────────────────────────────
+    function isAuth()  { return request.auth != null; }
+    function isOwner(uid) { return isAuth() && request.auth.uid == uid; }
+    function isAdmin() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // ── Dramas — public read, admin write ──────────────────────
+    match /dramas/{dramaId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Episodes (sub-collection) — public read, admin write ──
+    match /dramas/{dramaId}/episodes/{epId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Banners — public read, admin write ────────────────────
+    match /banners/{page} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Users — owner read/write; admin full access ────────────
+    match /users/{uid} {
+      allow read:   if isOwner(uid) || isAdmin();
+      // Users can update their own doc but cannot change isAdmin or plan
+      allow update: if isOwner(uid)
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                        .hasAny(['isAdmin', 'plan', 'status']);
+      allow create: if isOwner(uid);
+      allow delete: if isAdmin();
+    }
+
+    // ── Orders — owner read; admin full access; webhook creates ─
+    match /orders/{orderId} {
+      allow read:   if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuth();        // webhook (server-side) bypasses rules via Admin SDK
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Comments — authenticated read/write; owner delete ──────
+    match /comments/{commentId} {
+      allow read:   if true;
+      allow create: if isAuth()
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.text.size() <= 500;
+      allow update: if false;           // comments are immutable once posted
+      allow delete: if isAuth()
+                    && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    // ── Ratings — authenticated read; owner write ──────────────
+    match /ratings/{ratingId} {
+      allow read: if true;
+      allow write: if isAuth();
+    }
+
+    // ── Campaigns — public read, admin write ──────────────────
+    match /campaigns/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Packages — public read, admin write ───────────────────
+    match /packages/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Notifications (push history) — admin only ─────────────
+    match /notifications/{id} {
+      allow read:  if isAdmin();
+      allow write: if isAdmin();
+    }
+  }
+}
