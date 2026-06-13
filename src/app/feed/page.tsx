@@ -323,6 +323,7 @@ function FeedContent() {
     // Episode is free or already unlocked — hide any block sheet and allow playback
     if (ep.free || isUnlocked(ep)) {
       setShowNoPoints(false)
+      videoRef.current?.play().catch(() => {})
       return
     }
     if (!uid) return
@@ -336,6 +337,7 @@ function FeedContent() {
     setCoins(newCoins)
     setUnlocked(prev => new Set([...prev, key]))
     setShowNoPoints(false)
+    videoRef.current?.play().catch(() => {})
     updateDoc(doc(db, 'users', uid), { coins: newCoins, unlockedEpisodes: arrayUnion(key) }).catch(() => {})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx, uid, unlocked])
