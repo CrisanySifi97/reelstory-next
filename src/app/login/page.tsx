@@ -7,7 +7,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   updateProfile,
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
@@ -38,13 +39,34 @@ export default function LoginPage() {
     if (q.get('mode') === 'register') setMode('register')
     const next = q.get('next')
     const allowed = ['/inicio','/explorar','/lista','/perfil','/pontos','/detalhe','/feed','/admin']
+    let resolvedNext = '/inicio'
     if (next && allowed.some(p => next.startsWith(p))) {
+      resolvedNext = next
       setNextUrl(next)
       if (next.startsWith('/admin')) setIsAdminLogin(true)
     }
     const ref = q.get('ref')
-    if (ref && /^[A-Z0-9]{6,10}$/.test(ref)) setRefCode(ref)
+    let resolvedRef = ''
+    if (ref && /^[A-Z0-9]{6,10}$/.test(ref)) { resolvedRef = ref; setRefCode(ref) }
     getDoc(doc(db,'banners','login')).then(s=>{ if (s.exists() && s.data().active!==false) setLoginBanner(p=>({...p,...s.data()})) }).catch(()=>{})
+
+    // Handle return from Google signInWithRedirect
+    getRedirectResult(auth).then(async cred => {
+      if (!cred) return
+      setLoading(true)
+      try {
+        await createUserDoc(cred.user.uid, cred.user.email ?? '', cred.user.displayName ?? 'Utilizador', resolvedRef || undefined)
+        window.location.href = resolvedNext
+      } catch {
+        setLoading(false)
+      }
+    }).catch((err: unknown) => {
+      const code = (err as { code?: string }).code ?? ''
+      if (code === 'auth/unauthorized-domain')
+        setError('Dominio nao autorizado — adiciona reelstory-next.vercel.app em Firebase Console > Authentication > Authorized domains')
+      else if (code)
+        setError(`Erro Google: ${code}`)
+    })
   }, [])
 
   const createUserDoc = async (uid: string, email: string, displayName: string, inviteCode?: string) => {
@@ -115,20 +137,15 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      const cred = await signInWithPopup(auth, new GoogleAuthProvider())
-      await createUserDoc(cred.user.uid, cred.user.email ?? '', cred.user.displayName ?? 'Utilizador', refCode || undefined)
-      window.location.href = nextUrl
+      await signInWithRedirect(auth, new GoogleAuthProvider())
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''
       if (code === 'auth/unauthorized-domain')
         setError('Dominio nao autorizado — adiciona reelstory-next.vercel.app em Firebase Console > Authentication > Authorized domains')
-      else if (code === 'auth/popup-blocked')
-        setError('Popup bloqueado pelo browser. Permite popups e tenta de novo.')
-      else if (code === 'auth/popup-closed-by-user')
-        setError('Popup fechado antes de concluir. Tenta de novo.')
       else
         setError(`Erro Google: ${code || 'desconhecido'}`)
-    } finally { setLoading(false) }
+      setLoading(false)
+    }
   }
 
   return (
