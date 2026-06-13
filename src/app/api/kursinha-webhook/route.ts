@@ -26,6 +26,12 @@ const PACKAGE_MAP: Record<string, { pts: number; bonus: number; name: string; pr
 
 export async function POST(req: NextRequest) {
   try {
+    // Reject calls that don't carry the shared secret configured in the Kursinha webhook URL
+    const token = req.nextUrl.searchParams.get('token')
+    if (!process.env.KURSINHA_WEBHOOK_TOKEN || token !== process.env.KURSINHA_WEBHOOK_TOKEN) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    }
+
     const body = await req.json()
 
     // Accept payment.success or checkout.completed events
