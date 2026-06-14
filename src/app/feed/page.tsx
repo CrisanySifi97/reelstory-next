@@ -421,12 +421,6 @@ function FeedContent() {
         )}
       </div>
 
-      {/* TEMP DEBUG — remove after diagnosing random-episode report */}
-      <div style={{ position: 'absolute', top: 4, left: 4, zIndex: 999, background: 'rgba(0,0,0,.8)', color: '#0f0', fontSize: 10, padding: '4px 6px', borderRadius: 4, maxWidth: '90vw', wordBreak: 'break-all', fontFamily: 'monospace', pointerEvents: 'none' }}>
-        startEp={startEp} currentIdx={currentIdx} eps={episodes.length}<br/>
-        url={currentEp?.url}
-      </div>
-
       {/* ── Scrollable episodes ── */}
       <div ref={scrollRef} style={{ flex: 1, overflow: 'auto', scrollSnapType: 'y mandatory', scrollbarWidth: 'none' }}>
         {episodes.map((ep, idx) => {
@@ -668,8 +662,11 @@ function FeedContent() {
 // episode instead of the one the user just tapped.
 function FeedKeyed() {
   const params = useSearchParams()
-  const key = `${params.get('id') ?? ''}-${params.get('ep') ?? '0'}`
-  return <FeedContent key={key} />
+  // Use the raw query string as the key — normalizing a missing `ep` to '0'
+  // made `/feed?id=X` (the "Assistir" button) and `/feed?id=X&ep=0` (tapping
+  // episode 1) collide on the same key, so reopening via the episode card
+  // reused the previous FeedContent instance and kept its stale currentIdx.
+  return <FeedContent key={params.toString()} />
 }
 
 export default function FeedPage() {
