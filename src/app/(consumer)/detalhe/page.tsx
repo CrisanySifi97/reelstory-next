@@ -21,7 +21,7 @@ import { useMyList } from '@/lib/useMyList'
 import { useDrama, useDramas } from '@/lib/useDramas'
 import { Coins } from 'lucide-react'
 import { auth, db } from '@/lib/firebase'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, onSnapshot } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import type { Episode } from '@/types'
 
@@ -151,21 +151,22 @@ function DetalheContent() {
 
   const similar = allDramas.filter(d => d.id !== drama.id && d.genre === drama.genre).slice(0, 4)
 
-  /* Firebase — load unlocked episodes + coins */
+  /* Firebase — load unlocked episodes + coins (live, so returning from
+     /feed after unlocking an episode reflects the latest state) */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async user => {
-      if (!user) return
-      try {
-        const snap = await getDoc(doc(db, 'users', user.uid))
+    let unsubDoc = () => {}
+    const unsubAuth = onAuthStateChanged(auth, user => {
+      unsubDoc()
+      if (!user) { setUnlocked(new Set()); setCoins(null); return }
+      unsubDoc = onSnapshot(doc(db, 'users', user.uid), snap => {
         if (snap.exists()) {
           const d = snap.data()
-          const ul: string[] = d.unlockedEpisodes ?? []
-          setUnlocked(new Set(ul))
+          setUnlocked(new Set(d.unlockedEpisodes ?? []))
           setCoins(d.coins ?? 0)
         }
-      } catch { /* silent */ }
+      })
     })
-    return unsub
+    return () => { unsubDoc(); unsubAuth() }
   }, [])
 
   const isUnlocked = (ep: EpisodeWithId) =>
