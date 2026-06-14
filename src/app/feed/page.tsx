@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, Heart, Bookmark,
-  Share2, ChevronUp, Coins, Volume2, VolumeX, AlertCircle,
+  Share2, ChevronUp, Coins, Volume2, VolumeX, AlertCircle, Loader2,
 } from 'lucide-react'
 import { auth, db } from '@/lib/firebase'
 import {
@@ -23,10 +23,10 @@ type EpisodeWithId = Episode & { id: string }
 /** Adds Cloudinary quality/format transformation to a video URL */
 function hdUrl(url?: string): string {
   if (!url) return ''
-  // q_auto picks a bitrate based on content/network instead of forcing top quality,
-  // f_auto serves a smaller codec (e.g. webm/h265) when the browser supports it —
-  // q_auto:best was producing very heavy files that stalled on mobile data.
-  return url.replace('/upload/', '/upload/q_auto,f_auto/')
+  // q_auto:eco trims bitrate further than plain q_auto (source clips are already
+  // low-res, so the quality hit is minor) and f_auto serves a smaller codec when
+  // supported — q_auto:best was producing very heavy files that stalled on mobile data.
+  return url.replace('/upload/', '/upload/q_auto:eco,f_auto/')
 }
 
 function fmtViews(n: number): string {
@@ -86,6 +86,7 @@ function FeedContent() {
 
   // playback
   const [currentIdx, setCurrentIdx]     = useState(startEp)
+  const [videoReady, setVideoReady]     = useState(false)
   const [playing, setPlaying]           = useState(true)
   const [muted, setMuted]               = useState(true)
   const [tapIcon, setTapIcon]           = useState<'play'|'pause'|null>(null)
@@ -355,6 +356,12 @@ function FeedContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx])
 
+  // Reset the "ready" flag whenever the visible episode changes, so the
+  // spinner shows again while the new video buffers.
+  useEffect(() => {
+    setVideoReady(false)
+  }, [currentIdx])
+
   // Loading / not found guard
   if (dramaLoading) return (
     <div style={{ position:'fixed', inset:0, background:'#000', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontFamily:'var(--rs-font-body)' }}>
@@ -442,6 +449,7 @@ function FeedContent() {
                         const v = videoRef.current
                         if (v) setTotalTime(fmtTime(v.duration))
                       }}
+                      onCanPlay={() => setVideoReady(true)}
                     />
                   ) : (
                     <iframe
@@ -462,6 +470,11 @@ function FeedContent() {
                       muted
                       style={{ display: 'none' }}
                     />
+                  )}
+                  {ep.url && !videoReady && (
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                      <Loader2 size={36} color="#fff" style={{ animation: 'rs-spin 0.9s linear infinite', opacity: .85 }} />
+                    </div>
                   )}
                   <div onClick={handleTap} style={{ position: 'absolute', inset: 0, zIndex: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {tapIcon && (
@@ -610,6 +623,9 @@ function FeedContent() {
           0%   { opacity: 1; transform: scale(1); }
           60%  { opacity: 1; transform: scale(1.15); }
           100% { opacity: 0; transform: scale(1.3); }
+        }
+        @keyframes rs-spin {
+          to { transform: rotate(360deg); }
         }
         ::-webkit-scrollbar { display: none; }
       `}</style>
