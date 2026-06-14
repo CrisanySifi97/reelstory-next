@@ -3,14 +3,13 @@ import { useEffect, useRef, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft, Heart, MessageCircle, Bookmark,
-  Share2, ChevronUp, Coins, Volume2, VolumeX, Send, X, AlertCircle,
+  ArrowLeft, Heart, Bookmark,
+  Share2, ChevronUp, Coins, Volume2, VolumeX, AlertCircle,
 } from 'lucide-react'
 import { auth, db } from '@/lib/firebase'
 import {
-  doc, getDoc, setDoc, updateDoc, addDoc, getDocs,
-  collection, query, where, orderBy, limit,
-  serverTimestamp, arrayUnion, arrayRemove, increment,
+  doc, getDoc, setDoc, updateDoc,
+  arrayUnion, arrayRemove, increment,
 } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useDrama } from '@/lib/useDramas'
@@ -20,7 +19,6 @@ import type { Episode } from '@/types'
 
 const EPISODE_COST = 10
 type EpisodeWithId = Episode & { id: string }
-interface CommentDoc { id: string; uid: string; userName: string; text: string; createdAt: any }
 
 /** Adds Cloudinary quality transformation to a video URL */
 function hdUrl(url?: string): string {
@@ -55,97 +53,6 @@ function NoPointsSheet() {
           <span style={{ color: 'var(--rs-accent)', fontWeight: 800 }}>Ver pacotes →</span>
         </Link>
         <button onClick={() => window.history.back()} style={{ width: '100%', padding: '.75rem', background: 'none', border: 'none', color: 'rgba(255,255,255,.5)', fontSize: '.88rem', fontWeight: 600, cursor: 'pointer' }}>← Voltar às séries</button>
-      </div>
-    </div>
-  )
-}
-
-/* ── Comments bottom sheet ── */
-function CommentsSheet({ episodeKey, uid, userName, onClose, onSent }: {
-  episodeKey: string; uid: string | null; userName: string; onClose: () => void; onSent?: () => void
-}) {
-  const [list, setList]       = useState<CommentDoc[]>([])
-  const [text, setText]       = useState('')
-  const [sending, setSending] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const listRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    getDocs(query(
-      collection(db, 'comments'),
-      where('episodeKey', '==', episodeKey),
-      orderBy('createdAt', 'asc'),
-      limit(100),
-    )).then(snap => {
-      setList(snap.docs.map(d => ({ id: d.id, ...d.data() } as CommentDoc)))
-      setLoading(false)
-      setTimeout(() => listRef.current?.scrollTo({ top: 99999, behavior: 'smooth' }), 80)
-    }).catch(() => setLoading(false))
-  }, [episodeKey])
-
-  const send = async () => {
-    if (!uid) { alert('Entra para comentar'); return }
-    if (!text.trim()) return
-    setSending(true)
-    try {
-      const ref = await addDoc(collection(db, 'comments'), {
-        episodeKey, uid, userName: userName || 'Anónimo',
-        text: text.trim(), createdAt: serverTimestamp(),
-      })
-      const newComment: CommentDoc = { id: ref.id, uid, userName: userName || 'Anónimo', text: text.trim(), createdAt: null }
-      setList(prev => [...prev, newComment])
-      setText('')
-      setTimeout(() => listRef.current?.scrollTo({ top: 99999, behavior: 'smooth' }), 80)
-      setDoc(doc(db, 'episodeStats', episodeKey), { comments: increment(1) }, { merge: true }).catch(() => {})
-      onSent?.()
-    } catch { /* silent */ }
-    finally { setSending(false) }
-  }
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 850, background: 'rgba(0,0,0,.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 580, margin: '0 auto', background: '#111827', borderRadius: '20px 20px 0 0', display: 'flex', flexDirection: 'column', maxHeight: '75vh', border: '1px solid rgba(255,255,255,.08)', borderBottom: 'none' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.2rem .8rem', borderBottom: '1px solid rgba(255,255,255,.06)', flexShrink: 0 }}>
-          <span style={{ fontFamily: 'var(--rs-font-display)', fontWeight: 900, fontSize: '1rem' }}>Comentários</span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8892A4', cursor: 'pointer', display: 'flex' }}><X size={18} /></button>
-        </div>
-
-        {/* List */}
-        <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: '.8rem 1.2rem' }}>
-          {loading && <div style={{ textAlign: 'center', color: '#8892A4', fontSize: '.84rem', padding: '2rem 0' }}>A carregar...</div>}
-          {!loading && list.length === 0 && (
-            <div style={{ textAlign: 'center', color: '#8892A4', fontSize: '.84rem', padding: '2rem 0' }}>
-              <MessageCircle size={32} style={{ opacity: .3, marginBottom: 8 }} /><br/>Sê o primeiro a comentar!
-            </div>
-          )}
-          {list.map(c => (
-            <div key={c.id} style={{ display: 'flex', gap: '.7rem', marginBottom: '.9rem', alignItems: 'flex-start' }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--rs-grad-hero)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.78rem', fontWeight: 700, flexShrink: 0 }}>
-                {(c.userName?.[0] ?? '?').toUpperCase()}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '.74rem', fontWeight: 700, color: c.uid === uid ? 'var(--rs-primary)' : 'rgba(255,255,255,.7)', marginBottom: '.2rem' }}>{c.userName}</div>
-                <div style={{ fontSize: '.86rem', color: 'rgba(255,255,255,.88)', lineHeight: 1.4 }}>{c.text}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Input */}
-        <div style={{ display: 'flex', gap: '.6rem', padding: '.8rem 1rem', borderTop: '1px solid rgba(255,255,255,.06)', flexShrink: 0, paddingBottom: 'calc(.8rem + env(safe-area-inset-bottom, 0px))' }}>
-          <input
-            value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-            placeholder={uid ? 'Escreve um comentário...' : 'Entra para comentar'}
-            disabled={!uid}
-            style={{ flex: 1, background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 20, padding: '.6rem 1rem', color: '#fff', fontSize: '16px', outline: 'none', fontFamily: 'var(--rs-font-body)' }}
-          />
-          <button onClick={send} disabled={sending || !text.trim() || !uid} style={{ width: 40, height: 40, borderRadius: '50%', background: text.trim() && uid ? 'var(--rs-primary)' : 'rgba(255,255,255,.08)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: text.trim() && uid ? 'pointer' : 'default', flexShrink: 0, transition: 'background .2s' }}>
-            <Send size={16} />
-          </button>
-        </div>
       </div>
     </div>
   )
@@ -190,12 +97,8 @@ function FeedContent() {
   const [coins, setCoins]               = useState(0)
   const [unlocked, setUnlocked]         = useState<Set<string>>(new Set())
   const [likedEps, setLikedEps]         = useState<Set<string>>(new Set())
-  const [stats, setStats]               = useState<Record<string, { likes: number; comments: number }>>({})
+  const [stats, setStats]               = useState<Record<string, { likes: number }>>({})
   const [likePulseKey, setLikePulseKey] = useState<string | null>(null)
-  const userNameRef                     = useRef('Anónimo')
-
-  // comments
-  const [commentsKey, setCommentsKey]   = useState<string | null>(null)
 
   // ui
   const [toast, setToast]               = useState('')
@@ -248,7 +151,6 @@ function FeedContent() {
     const unsub = onAuthStateChanged(auth, async user => {
       if (!user) return
       setUid(user.uid)
-      userNameRef.current = user.displayName || user.email?.split('@')[0] || 'Anónimo'
       try {
         const snap = await getDoc(doc(db, 'users', user.uid))
         if (snap.exists()) {
@@ -310,7 +212,7 @@ function FeedContent() {
   const isUnlocked = (ep: EpisodeWithId) => ep.free || unlocked.has(`${dramaId2}_${ep.id}`)
   const epKey = (ep: EpisodeWithId) => `${dramaId2}_${ep.id ?? ep.order}`
 
-  /* ── Load like/comment counts for the current episode ── */
+  /* ── Load like counts for the current episode ── */
   useEffect(() => {
     const ep = episodes[currentIdx]
     if (!ep) return
@@ -318,7 +220,7 @@ function FeedContent() {
     if (stats[key]) return
     getDoc(doc(db, 'episodeStats', key)).then(snap => {
       const d = snap.data()
-      setStats(prev => ({ ...prev, [key]: { likes: d?.likes ?? 0, comments: d?.comments ?? 0 } }))
+      setStats(prev => ({ ...prev, [key]: { likes: d?.likes ?? 0 } }))
     }).catch(() => {})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx, dramaId2])
@@ -383,7 +285,7 @@ function FeedContent() {
     setLikedEps(next)
     setStats(prev => ({
       ...prev,
-      [key]: { likes: Math.max(0, (prev[key]?.likes ?? 0) + (isLiked ? -1 : 1)), comments: prev[key]?.comments ?? 0 },
+      [key]: { likes: Math.max(0, (prev[key]?.likes ?? 0) + (isLiked ? -1 : 1)) },
     }))
     if (!isLiked) {
       setLikePulseKey(key)
@@ -399,7 +301,7 @@ function FeedContent() {
       setLikedEps(likedEps)
       setStats(prev => ({
         ...prev,
-        [key]: { likes: Math.max(0, (prev[key]?.likes ?? 0) + (isLiked ? 1 : -1)), comments: prev[key]?.comments ?? 0 },
+        [key]: { likes: Math.max(0, (prev[key]?.likes ?? 0) + (isLiked ? 1 : -1)) },
       }))
     }
   }
@@ -577,11 +479,6 @@ function FeedContent() {
                   onClick={() => toggleLikeEp(ep)}
                 />
                 <RailButton
-                  icon={<MessageCircle size={20} />}
-                  label={epStats?.comments ? fmtViews(epStats.comments) : 'Comentar'}
-                  onClick={() => setCommentsKey(epKey(ep))}
-                />
-                <RailButton
                   icon={<Bookmark size={20} fill={isSaved ? '#fff' : 'none'} />}
                   label={isSaved ? 'Guardado' : 'Guardar'}
                   active={isSaved}
@@ -669,23 +566,6 @@ function FeedContent() {
 
       {/* ── No-points sheet ── */}
       {showNoPoints && <NoPointsSheet />}
-
-      {/* ── Comments sheet ── */}
-      {commentsKey && (
-        <CommentsSheet
-          episodeKey={commentsKey}
-          uid={uid}
-          userName={userNameRef.current}
-          onClose={() => setCommentsKey(null)}
-          onSent={() => {
-            const key = commentsKey
-            setStats(prev => ({
-              ...prev,
-              [key]: { likes: prev[key]?.likes ?? 0, comments: (prev[key]?.comments ?? 0) + 1 },
-            }))
-          }}
-        />
-      )}
 
       {/* ── Toast ── */}
       {toast && (
