@@ -633,6 +633,17 @@ function FeedContent() {
   )
 }
 
+// Re-mounts FeedContent whenever the drama/episode in the URL changes. Without
+// this, navigating from /detalhe to /feed?id=X&ep=0 while a /feed page is
+// already mounted reuses the component instance — currentIdx keeps its old
+// value from useState(startEp) and the player shows the previously-watched
+// episode instead of the one the user just tapped.
+function FeedKeyed() {
+  const params = useSearchParams()
+  const key = `${params.get('id') ?? ''}-${params.get('ep') ?? '0'}`
+  return <FeedContent key={key} />
+}
+
 export default function FeedPage() {
   return (
     <Suspense fallback={
@@ -640,7 +651,7 @@ export default function FeedPage() {
         <div style={{ color: 'rgba(255,255,255,.5)', fontSize: '.85rem' }}>A carregar...</div>
       </div>
     }>
-      <FeedContent />
+      <FeedKeyed />
     </Suspense>
   )
 }
