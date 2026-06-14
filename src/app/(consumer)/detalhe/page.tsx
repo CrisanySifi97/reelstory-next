@@ -396,6 +396,14 @@ function DetalheContent() {
             {/* Play */}
             <Link
               href={`/feed?id=${drama.id}`}
+              onClick={(e) => {
+                // Append a cache-busting timestamp so re-entering the feed for the
+                // same drama always gets a fresh player instance — otherwise the
+                // feed could reuse a previous instance and resume at whatever
+                // episode was last scrolled to, instead of episode 1.
+                e.preventDefault()
+                router.push(`/feed?id=${drama.id}&_n=${Date.now()}`)
+              }}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -509,7 +517,7 @@ function DetalheContent() {
               idx={i}
               dramaId={drama.id}
               isUnlocked={isUnlocked(ep)}
-              onClick={() => router.push(`/feed?id=${drama.id}&ep=${i}`)}
+              onClick={() => router.push(`/feed?id=${drama.id}&ep=${i}&_n=${Date.now()}`)}
             />
           ))}
         </div>

@@ -218,7 +218,7 @@ export default function InicioPage() {
         ))}</>}
         <div style={{ opacity: loaded?1:0, transition:'opacity .4s' }}>
           {continueWatching.length > 0 && (
-            <Row title="Continuar a Ver" items={continueWatching.map(c=>c.drama)} cardFn={(d,i)=><DramaCard key={d.id} drama={d} size="continue" progress={continueWatching[i].progress} onClick={()=>router.push(`/feed?id=${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
+            <Row title="Continuar a Ver" items={continueWatching.map(c=>c.drama)} cardFn={(d,i)=><DramaCard key={d.id} drama={d} size="continue" progress={continueWatching[i].progress} onClick={()=>router.push(`/feed?id=${d.id}&_n=${Date.now()}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
           )}
           <Row title="Top 10 Angola" items={top10} cardFn={(d,i)=><DramaCard key={d.id} drama={d} size="top10" rank={i+1} onClick={()=>router.push(`/detalhe?id=${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
           <Row title="Novos Episódios" items={novos} cardFn={(d)=><DramaCard key={d.id} drama={d} onClick={()=>router.push(`/detalhe?id=${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>

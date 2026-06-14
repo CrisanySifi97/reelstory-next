@@ -421,14 +421,6 @@ function FeedContent() {
         )}
       </div>
 
-      {/* TEMP DEBUG — remove after diagnosing random-episode report */}
-      <div style={{ position: 'absolute', top: 4, left: 4, zIndex: 999, background: 'rgba(0,0,0,.8)', color: '#0f0', fontSize: 10, padding: '4px 6px', borderRadius: 4, maxWidth: '90vw', wordBreak: 'break-all', fontFamily: 'monospace', pointerEvents: 'none' }}>
-        drama={drama?.title}<br/>
-        startEp={startEp} currentIdx={currentIdx} eps={episodes.length}<br/>
-        ep[0].url={episodes[0]?.url}<br/>
-        currentEp.url={currentEp?.url}
-      </div>
-
       {/* ── Scrollable episodes ── */}
       <div ref={scrollRef} style={{ flex: 1, overflow: 'auto', scrollSnapType: 'y mandatory', scrollbarWidth: 'none' }}>
         {episodes.map((ep, idx) => {
@@ -670,10 +662,11 @@ function FeedContent() {
 // episode instead of the one the user just tapped.
 function FeedKeyed() {
   const params = useSearchParams()
-  // Use the raw query string as the key — normalizing a missing `ep` to '0'
-  // made `/feed?id=X` (the "Assistir" button) and `/feed?id=X&ep=0` (tapping
-  // episode 1) collide on the same key, so reopening via the episode card
-  // reused the previous FeedContent instance and kept its stale currentIdx.
+  // Use the raw query string as the key. Links into /feed append a `_n`
+  // cache-busting timestamp (see detalhe page), so re-tapping the same
+  // episode produces a different key every time and always forces a fresh
+  // FeedContent instance — otherwise the previous currentIdx (e.g. from
+  // scrolling to the last episode) would be reused.
   return <FeedContent key={params.toString()} />
 }
 

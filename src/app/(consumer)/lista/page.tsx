@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Bookmark, Play, Trash2, Search } from 'lucide-react'
 import Nav from '@/components/layout/Nav'
 import BottomNav from '@/components/layout/BottomNav'
@@ -17,6 +18,7 @@ type DramaWithIcon = Drama & { icon: string }
 
 function ListCard({ drama, onRemove }: { drama: DramaWithIcon; onRemove: () => void }) {
   const [hov, setHov] = useState(false)
+  const router = useRouter()
   return (
     <div
       onMouseEnter={() => setHov(true)}
@@ -51,7 +53,7 @@ function ListCard({ drama, onRemove }: { drama: DramaWithIcon; onRemove: () => v
           {hov && (
             <div style={{ position:'absolute', bottom:10, left:10, right:10 }}>
               <div style={{ display:'flex', gap:8, justifyContent:'center' }}>
-                <Link href={`/feed?id=${drama.id}`} onClick={e => e.stopPropagation()}
+                <Link href={`/feed?id=${drama.id}`} onClick={e => { e.preventDefault(); e.stopPropagation(); router.push(`/feed?id=${drama.id}&_n=${Date.now()}`) }}
                   style={{ display:'flex', alignItems:'center', gap:'.3rem', background:'#fff', color:'#000', padding:'.5rem 1rem', borderRadius:8, fontSize:'.8rem', fontWeight:700, textDecoration:'none' }}>
                   <Play size={13} fill="#000"/> Assistir
                 </Link>

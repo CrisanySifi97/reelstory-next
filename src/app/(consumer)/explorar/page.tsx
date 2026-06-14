@@ -1,6 +1,7 @@
 'use client'
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Search, X, Star, SearchX } from 'lucide-react'
 import Nav from '@/components/layout/Nav'
 import BottomNav from '@/components/layout/BottomNav'
@@ -109,6 +110,7 @@ function DramaCard({ drama, onToast }: { drama: typeof DRAMAS[0]; onToast: (m: s
 }
 
 export default function ExplorarPage() {
+  const router = useRouter()
   const [query, setQuery] = useState('')
   const [genre, setGenre] = useState<Drama['genre'] | 'todos'>('todos')
   const [tab, setTab] = useState<Tab>('emAlta')
@@ -300,7 +302,7 @@ export default function ExplorarPage() {
                 <span style={{ color: 'var(--rs-accent)', fontWeight: 700 }}>★ {featured.rating}</span>
                 &ensp;·&ensp;{featured.episodes.length} episodios
               </div>
-              <Link href={`/feed?id=${featured.id}`} style={{
+              <Link href={`/feed?id=${featured.id}`} onClick={(e) => { e.preventDefault(); router.push(`/feed?id=${featured.id}&_n=${Date.now()}`) }} style={{
                 display: 'inline-flex', alignItems: 'center', gap: '.4rem',
                 background: 'var(--rs-grad-hero)',
                 color: '#fff', textDecoration: 'none',
