@@ -421,6 +421,14 @@ function FeedContent() {
         )}
       </div>
 
+      {/* TEMP DEBUG — remove after diagnosing random-episode report */}
+      <div style={{ position: 'absolute', top: 4, left: 4, zIndex: 999, background: 'rgba(0,0,0,.8)', color: '#0f0', fontSize: 10, padding: '4px 6px', borderRadius: 4, maxWidth: '90vw', wordBreak: 'break-all', fontFamily: 'monospace', pointerEvents: 'none' }}>
+        query={params.toString()}<br/>
+        drama={drama?.title}<br/>
+        startEp={startEp} currentIdx={currentIdx} eps={episodes.length}<br/>
+        currentEp.url={currentEp?.url}
+      </div>
+
       {/* ── Scrollable episodes ── */}
       <div ref={scrollRef} style={{ flex: 1, overflow: 'auto', scrollSnapType: 'y mandatory', scrollbarWidth: 'none' }}>
         {episodes.map((ep, idx) => {
