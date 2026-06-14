@@ -18,7 +18,7 @@ function DramaCard({ drama, onToast }: { drama: typeof DRAMAS[0]; onToast: (m: s
 
   return (
     <Link
-      href={`/feed?id=${drama.id}`}
+      href={`/detalhe?id=${drama.id}`}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
