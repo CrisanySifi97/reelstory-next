@@ -285,25 +285,24 @@ function FeedContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx, unlocked])
 
-  /* ── Scroll snap observer ── */
+  /* ── Visible-episode observer ── */
+  // Uses IntersectionObserver instead of scroll+rAF math, which can miss
+  // updates on momentum/snap scrolling in some mobile browsers.
   useEffect(() => {
     const container = scrollRef.current
     if (!container) return
-    let ticking = false
-    const onScroll = () => {
-      if (ticking) return
-      ticking = true
-      requestAnimationFrame(() => {
-        ticking = false
-        const h = container.clientHeight
-        if (h === 0) return
-        const idx = Math.round(container.scrollTop / h)
-        if (idx !== currentIdx) setCurrentIdx(idx)
-      })
-    }
-    container.addEventListener('scroll', onScroll, { passive: true })
-    return () => container.removeEventListener('scroll', onScroll)
-  }, [currentIdx])
+    const targets = Array.from(container.children) as HTMLElement[]
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          const idx = targets.indexOf(entry.target as HTMLElement)
+          if (idx !== -1) setCurrentIdx(prev => (prev === idx ? prev : idx))
+        }
+      }
+    }, { root: container, threshold: 0.5 })
+    targets.forEach(el => observer.observe(el))
+    return () => observer.disconnect()
+  }, [episodes.length])
 
   const dramaId2 = drama?.id ?? ''
   const isUnlocked = (ep: EpisodeWithId) => ep.free || unlocked.has(`${dramaId2}_${ep.id}`)
