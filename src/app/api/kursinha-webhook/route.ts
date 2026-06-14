@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
-import { getFirestore, FieldValue } from 'firebase-admin/firestore'
+import { getFirestore, FieldValue, Transaction } from 'firebase-admin/firestore'
 
 function getAdminDb() {
   if (!getApps().length) {
@@ -77,26 +77,31 @@ export async function POST(req: NextRequest) {
     })
 
     // ── Referral bonus: 100 pts to referrer on first purchase ──
-    const userSnap = await db.collection('users').doc(userId).get()
-    const userData = userSnap.data()
-    if (userData?.referredBy && !userData?.referralBonusPaid) {
-      const referrersSnap = await db.collection('users')
-        .where('referralCode', '==', userData.referredBy)
-        .limit(1).get()
-      if (!referrersSnap.empty) {
-        const referrerId = referrersSnap.docs[0].id
-        await db.collection('users').doc(referrerId).update({
-          coins: FieldValue.increment(100),
-          pointsHistory: FieldValue.arrayUnion({
-            pkg: 'Convite',
-            pts: 100,
-            date: new Date().toLocaleDateString('pt-AO'),
-            note: `Bônus por convite de ${userData.name || userId}`,
-          }),
-        })
-        await db.collection('users').doc(userId).update({ referralBonusPaid: true })
-      }
-    }
+    // Wrapped in a transaction so the "already paid" check and the write are atomic,
+    // preventing a double payout if the webhook fires twice for the same user.
+    await db.runTransaction(async (tx: Transaction) => {
+      const userRef  = db.collection('users').doc(userId)
+      const userSnap = await tx.get(userRef)
+      const userData = userSnap.data()
+      if (!userData?.referredBy || userData?.referralBonusPaid) return
+
+      const referrersSnap = await tx.get(
+        db.collection('users').where('referralCode', '==', userData.referredBy).limit(1)
+      )
+      if (referrersSnap.empty) return
+
+      const referrerId = referrersSnap.docs[0].id
+      tx.update(db.collection('users').doc(referrerId), {
+        coins: FieldValue.increment(100),
+        pointsHistory: FieldValue.arrayUnion({
+          pkg: 'Convite',
+          pts: 100,
+          date: new Date().toLocaleDateString('pt-AO'),
+          note: `Bônus por convite de ${userData.name || userId}`,
+        }),
+      })
+      tx.update(userRef, { referralBonusPaid: true })
+    })
 
     // Save order record
     await db.collection('orders').add({

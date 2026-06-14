@@ -129,7 +129,7 @@ export default function AdminPage() {
   const [bannerTab, setBannerTab]   = useState<BannerPage>('landing')
   const [bannerSaving, setBannerSaving] = useState(false)
   const [bLanding, setBLanding]     = useState<BannerLanding & {heroImage?:string;phoneTitle?:string;phoneEp?:string}>({ title:'Dramas asiáticos na ponta dos dedos', subtitle:'Episódios curtos, paixões grandes. Descobre histórias incríveis a qualquer hora.', badge:'NOVO', ctaText:'Explorar grátis', gradient:'linear-gradient(135deg,#1a0533 0%,#2d1b69 40%,#141414 100%)', active:true, phoneTitle:'Amor em Segredo', phoneEp:'Ep. 8 · ★ 4.9 · 2,1M visualizações' })
-  const [bLogin, setBLogin]         = useState<BannerLogin & {images?:string[]}>({ tagline:'Desbloqueia episódios com pontos. Sem mensalidades.', s1n:'500+', s1l:'Dramas', s2n:'2M+', s2l:'Fãs', s3n:'4.9â˜…', s3l:'Avaliação', active:true, images:[] })
+  const [bLogin, setBLogin]         = useState<BannerLogin & {images?:string[]}>({ tagline:'Desbloqueia episódios com pontos. Sem mensalidades.', s1n:'500+', s1l:'Dramas', s2n:'2M+', s2l:'Fãs', s3n:'4.9★', s3l:'Avaliação', active:true, images:[] })
   const [bInicio, setBInicio]       = useState<BannerInicio & {heroImage?:string}>({ dramaId:'6', active:true })
   const [bExplorar, setBExplorar]   = useState<BannerExplorar & {bannerImage?:string}>({ dramaId:'1', badgeText:'EM DESTAQUE', active:true })
 
@@ -1287,7 +1287,7 @@ export default function AdminPage() {
               <div className="kpis" style={{ marginBottom:'1.5rem' }}>
                 <div className="kpi k1"><div className="kpi-lbl">Total de vistas</div><div className="kpi-val">{totalViews>=1000?`${(totalViews/1000).toFixed(1)}K`:fmt(totalViews)}</div><div className="kpi-d up"><TrendingUp size={12}/>{allDramaList.length} séries</div><div className="kpi-ic"><Eye size={18}/></div></div>
                 <div className="kpi k2"><div className="kpi-lbl">Total episódios</div><div className="kpi-val">{fmt(totalEps)}</div><div className="kpi-d up"><TrendingUp size={12}/>{allDramaList.filter(d=>d.status==='Ativo').length} activas</div><div className="kpi-ic"><PlayCircle size={18}/></div></div>
-                <div className="kpi k3"><div className="kpi-lbl">Avaliação média</div><div className="kpi-val">{avgRating} â˜…</div><div className="kpi-d up"><TrendingUp size={12}/>{ratings.length} avaliações</div><div className="kpi-ic"><Star size={18}/></div></div>
+                <div className="kpi k3"><div className="kpi-lbl">Avaliação média</div><div className="kpi-val">{avgRating} ★</div><div className="kpi-d up"><TrendingUp size={12}/>{ratings.length} avaliações</div><div className="kpi-ic"><Star size={18}/></div></div>
                 <div className="kpi k4"><div className="kpi-lbl">Receita total</div><div className="kpi-val">{revenue>0?`Kz ${fmt(revenue)}`:'Kz 0'}</div><div className="kpi-d up"><TrendingUp size={12}/>{orders.length} encomendas</div><div className="kpi-ic"><Wallet size={18}/></div></div>
               </div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'1rem', marginBottom:'1.5rem' }}>
@@ -1566,7 +1566,7 @@ export default function AdminPage() {
                           <div style={{ position:'relative', zIndex:1 }}>
                             <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1.3rem', marginBottom:'.3rem' }}>{d.title}</div>
                             <div style={{ fontSize:'.78rem', color:'rgba(255,255,255,.7)', display:'flex', gap:'.5rem' }}>
-                              <span>â˜… {d.rating}</span><span>·</span><span>{d.episodes?.length||0} eps</span><span>·</span><span>{GENRE_LABELS[d.genre]}</span>
+                              <span>★ {d.rating}</span><span>·</span><span>{d.episodes?.length||0} eps</span><span>·</span><span>{GENRE_LABELS[d.genre]}</span>
                             </div>
                           </div>
                         </div>
@@ -1628,7 +1628,7 @@ export default function AdminPage() {
                           <div style={{ position:'relative', zIndex:1, padding:'1rem' }}>
                             <div style={{ display:'inline-block', background:'rgba(255,56,92,.25)', border:'1px solid rgba(255,56,92,.5)', borderRadius:50, padding:'.15rem .6rem', fontSize:'.65rem', fontWeight:700, color:'var(--rs-primary)', marginBottom:'.5rem' }}>{bExplorar.badgeText||'EM DESTAQUE'}</div>
                             <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1.2rem', lineHeight:1.2, marginBottom:'.3rem' }}>{d.title}</div>
-                            <div style={{ fontSize:'.72rem', color:'rgba(255,255,255,.7)' }}>â˜… {d.rating} · {d.episodes?.length||0} eps</div>
+                            <div style={{ fontSize:'.72rem', color:'rgba(255,255,255,.7)' }}>★ {d.rating} · {d.episodes?.length||0} eps</div>
                           </div>
                         </div>
                       )

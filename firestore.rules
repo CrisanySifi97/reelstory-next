@@ -42,7 +42,8 @@ service cloud.firestore {
     // ── Orders — owner read; admin full access; webhook creates ─
     match /orders/{orderId} {
       allow read:   if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuth();        // webhook (server-side) bypasses rules via Admin SDK
+      // No client-side create — the webhook uses the Admin SDK, which bypasses these rules
+      allow create: if isAdmin();
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }

@@ -180,6 +180,9 @@ function FeedContent() {
       }, 90)
     }
     return () => { if (progRef.current) clearInterval(progRef.current) }
+  // `unlocked` is intentional: when the user spends points to unlock the current
+  // episode, this restarts the fake progress bar from 0 instead of leaving it
+  // wherever it was while the "locked" placeholder was showing.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx, unlocked])
 
@@ -272,6 +275,10 @@ function FeedContent() {
       setShowNoPoints(true)
       videoRef.current?.pause()
     })
+  // `coins` and `drama` are read but deliberately excluded: this effect both reads
+  // and writes `coins`/`unlocked`, so depending on them would re-trigger the
+  // deduction on every update they cause. It re-runs on episode change, login
+  // state change, or unlock-set change instead.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx, uid, unlocked])
 
