@@ -202,16 +202,36 @@ function FeedContent() {
     if (startEp > 0) {
       container.scrollTop = startEp * container.clientHeight
     }
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+    // Wait a frame so layout (and the scrollTop set above) has settled before
+    // observing — observing immediately can make the observer's first report
+    // for each target carry stale/incorrect intersection ratios.
+    let observer: IntersectionObserver | null = null
+    const raf = requestAnimationFrame(() => {
+      observer = new IntersectionObserver((entries) => {
+        // A single callback can report several entries at once (e.g. right after
+        // observe() is called, or during fast scroll-snap settling). Picking the
+        // most-visible one — instead of acting on every qualifying entry in
+        // iteration order — avoids ending up on the wrong episode when a
+        // lower-visibility entry happens to be processed last.
+        let bestIdx = -1
+        let bestRatio = 0
+        for (const entry of entries) {
+          if (!entry.isIntersecting || entry.intersectionRatio < bestRatio) continue
           const idx = targets.indexOf(entry.target as HTMLElement)
-          if (idx !== -1) setCurrentIdx(prev => (prev === idx ? prev : idx))
+          if (idx === -1) continue
+          bestRatio = entry.intersectionRatio
+          bestIdx = idx
         }
-      }
-    }, { root: container, threshold: 0.5 })
-    targets.forEach(el => observer.observe(el))
-    return () => observer.disconnect()
+        if (bestIdx !== -1 && bestRatio >= 0.5) {
+          setCurrentIdx(prev => (prev === bestIdx ? prev : bestIdx))
+        }
+      }, { root: container, threshold: 0.5 })
+      targets.forEach(el => observer!.observe(el))
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      observer?.disconnect()
+    }
   }, [episodes.length])
 
   const dramaId2 = drama?.id ?? ''
