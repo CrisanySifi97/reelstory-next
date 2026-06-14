@@ -19,9 +19,9 @@ function getAdminDb() {
 
 const PACKAGE_MAP: Record<string, { pts: number; bonus: number; name: string; priceKz: number }> = {
   '6a01a97460b5a002d3e34d85': { pts: 100,  bonus: 0,   name: 'Basico',    priceKz: 1000  },
-  '6a01aa75f10214290866c137': { pts: 500,  bonus: 50,  name: 'Popular',   priceKz: 4500  },
-  '6a01ab0a9b9ba2580ae9aee7': { pts: 1200, bonus: 200, name: 'Mega',      priceKz: 9900  },
-  '6a01aba1f10214290866c138': { pts: 3500, bonus: 500, name: 'Ultra VIP', priceKz: 24900 },
+  '6a01aa75f10214290866c137': { pts: 550,  bonus: 50,  name: 'Popular',   priceKz: 4500  },
+  '6a01ab0a9b9ba2580ae9aee7': { pts: 1400, bonus: 200, name: 'Mega',      priceKz: 9900  },
+  '6a01aba1f10214290866c138': { pts: 4000, bonus: 500, name: 'Ultra VIP', priceKz: 24900 },
 }
 
 export async function POST(req: NextRequest) {
