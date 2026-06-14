@@ -262,14 +262,6 @@ function FeedContent() {
     return unsub
   }, [])
 
-  /* ── Scroll to startEp on mount ── */
-  useEffect(() => {
-    if (startEp > 0 && scrollRef.current) {
-      scrollRef.current.scrollTop = startEp * scrollRef.current.clientHeight
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   /* ── Progress bar + state reset on episode change ── */
   useEffect(() => {
     if (progRef.current) clearInterval(progRef.current)
@@ -289,13 +281,19 @@ function FeedContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx, unlocked])
 
-  /* ── Visible-episode observer ── */
+  /* ── Scroll to startEp + visible-episode observer ── */
   // Uses IntersectionObserver instead of scroll+rAF math, which can miss
-  // updates on momentum/snap scrolling in some mobile browsers.
+  // updates on momentum/snap scrolling in some mobile browsers. Scrolling to
+  // startEp is done here too, once episodes are actually rendered — doing it
+  // in an earlier effect (before episodes load) gets clamped back to 0.
   useEffect(() => {
     const container = scrollRef.current
     if (!container) return
     const targets = Array.from(container.children) as HTMLElement[]
+    if (targets.length === 0) return
+    if (startEp > 0) {
+      container.scrollTop = startEp * container.clientHeight
+    }
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
