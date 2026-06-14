@@ -9,6 +9,7 @@ import {
   GoogleAuthProvider,
   signInWithRedirect,
   getRedirectResult,
+  onAuthStateChanged,
   updateProfile,
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
@@ -51,15 +52,18 @@ export default function LoginPage() {
     getDoc(doc(db,'banners','login')).then(s=>{ if (s.exists() && s.data().active!==false) setLoginBanner(p=>({...p,...s.data()})) }).catch(()=>{})
 
     // Handle return from Google signInWithRedirect
-    getRedirectResult(auth).then(async cred => {
-      if (!cred) return
+    let redirected = false
+    const goNext = (uid: string, email: string, displayName: string) => {
+      if (redirected) return
+      redirected = true
       setLoading(true)
-      try {
-        await createUserDoc(cred.user.uid, cred.user.email ?? '', cred.user.displayName ?? 'Utilizador', resolvedRef || undefined)
-        window.location.href = resolvedNext
-      } catch {
-        setLoading(false)
-      }
+      // createUserDoc is non-blocking — Firestore rules can't break login
+      createUserDoc(uid, email, displayName, resolvedRef || undefined).catch(() => {})
+      window.location.href = resolvedNext
+    }
+
+    getRedirectResult(auth).then(cred => {
+      if (cred) goNext(cred.user.uid, cred.user.email ?? '', cred.user.displayName ?? 'Utilizador')
     }).catch((err: unknown) => {
       const code = (err as { code?: string }).code ?? ''
       if (code === 'auth/unauthorized-domain')
@@ -67,6 +71,17 @@ export default function LoginPage() {
       else if (code)
         setError(`Erro Google: ${code}`)
     })
+
+    // Fallback: signInWithRedirect can complete without getRedirectResult
+    // matching the pending operation — detect the auth-state change instead.
+    let unsub = () => {}
+    if (sessionStorage.getItem('rs_google_redirect') === '1') {
+      sessionStorage.removeItem('rs_google_redirect')
+      unsub = onAuthStateChanged(auth, user => {
+        if (user) goNext(user.uid, user.email ?? '', user.displayName ?? 'Utilizador')
+      })
+    }
+    return () => unsub()
   }, [])
 
   const createUserDoc = async (uid: string, email: string, displayName: string, inviteCode?: string) => {
@@ -137,8 +152,10 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
+      sessionStorage.setItem('rs_google_redirect', '1')
       await signInWithRedirect(auth, new GoogleAuthProvider())
     } catch (err: unknown) {
+      sessionStorage.removeItem('rs_google_redirect')
       const code = (err as { code?: string }).code ?? ''
       if (code === 'auth/unauthorized-domain')
         setError('Dominio nao autorizado — adiciona reelstory-next.vercel.app em Firebase Console > Authentication > Authorized domains')
