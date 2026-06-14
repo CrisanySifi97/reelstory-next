@@ -12,7 +12,7 @@ import ImageUpload from '@/components/ImageUpload'
 import { auth, db, ADMIN_EMAIL } from '@/lib/firebase'
 import {
   collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc,
-  doc, setDoc, orderBy, query, serverTimestamp, where, writeBatch,
+  doc, setDoc, deleteField, orderBy, query, serverTimestamp, where, writeBatch,
 } from 'firebase/firestore'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import type { Drama, UserProfile, Order, Episode } from '@/types'
@@ -164,7 +164,19 @@ export default function AdminPage() {
     return unsub
   }, [])
 
-  useEffect(() => { if (authed) { loadDramas(); loadUsers(); loadOrders(); loadRatings(); loadCampaigns(); loadNotifs(); loadBanners() } }, [authed])
+  useEffect(() => { if (authed) { loadDramas(); loadUsers(); loadOrders(); loadRatings(); loadCampaigns(); loadNotifs(); loadBanners(); loadPkgs() } }, [authed])
+
+  const loadPkgs = async () => {
+    try {
+      const snap = await getDocs(collection(db,'packages'))
+      if (snap.empty) return
+      const overrides = new Map(snap.docs.map(d => [d.id, d.data()]))
+      setPkgs(prev => prev.map(p => {
+        const o = overrides.get(p._id)
+        return o ? { ...p, ...o } : p
+      }))
+    } catch {}
+  }
 
   const loadDramas = async () => {
     try {
@@ -247,9 +259,9 @@ export default function AdminPage() {
     if (!pkgEditId) return
     setPkgSaving(true)
     try {
-      const data = { name:pkgForm.name, pts:parseInt(pkgForm.pts)||0, bonus:parseInt(pkgForm.bonus)||0, priceKz:parseInt(pkgForm.priceKz)||0, badge:pkgForm.badge||undefined }
-      await updateDoc(doc(db,'packages',pkgEditId), data)
-      setPkgs(p=>p.map(x=>x._id===pkgEditId?{...x,...data}:x))
+      const data = { name:pkgForm.name, pts:parseInt(pkgForm.pts)||0, bonus:parseInt(pkgForm.bonus)||0, priceKz:parseInt(pkgForm.priceKz)||0, badge:pkgForm.badge || deleteField() }
+      await setDoc(doc(db,'packages',pkgEditId), data, { merge: true })
+      setPkgs(p=>p.map(x=>x._id===pkgEditId?{...x,...data,badge:pkgForm.badge||undefined}:x))
       setPkgEditId(null); showToast('Pacote actualizado')
     } catch {
       setPkgs(p=>p.map(x=>x._id===pkgEditId?{...x,name:pkgForm.name,pts:parseInt(pkgForm.pts)||x.pts,bonus:parseInt(pkgForm.bonus)||x.bonus,priceKz:parseInt(pkgForm.priceKz)||x.priceKz,badge:pkgForm.badge||undefined}:x))

@@ -396,41 +396,50 @@ function FeedContent() {
               {/* ── Video or Poster ── */}
               {hasVideo && isCurrent ? (
                 <>
-                  <video
-                    ref={videoRef}
-                    key={`${drama!.id}-${ep.url ?? ep.ytId}-${idx}`}
-                    src={hdUrl(ep.url)}
-                    autoPlay
-                    playsInline
-                    muted={muted}
-                    preload="auto"
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', background: '#000', zIndex: 1 }}
-                    onPlay={() => setPlaying(true)}
-                    onPause={() => setPlaying(false)}
-                    onEnded={() => {
-                      const nextIdx = currentIdx + 1
-                      if (nextIdx >= episodes.length) return
-                      const nextEp = episodes[nextIdx] as EpisodeWithId
-                      const canWatch = nextEp.free || isUnlocked(nextEp) || coins > 0
-                      if (!canWatch) {
-                        setShowNoPoints(true)
-                        return
-                      }
-                      scrollRef.current?.scrollTo({ top: nextIdx * (scrollRef.current.clientHeight), behavior: 'smooth' })
-                    }}
-                    onTimeUpdate={() => {
-                      const v = videoRef.current
-                      if (v && v.duration) {
-                        setProgress((v.currentTime / v.duration) * 100)
-                        setCurrentTime(fmtTime(v.currentTime))
-                        setTotalTime(fmtTime(v.duration))
-                      }
-                    }}
-                    onLoadedMetadata={() => {
-                      const v = videoRef.current
-                      if (v) setTotalTime(fmtTime(v.duration))
-                    }}
-                  />
+                  {ep.url ? (
+                    <video
+                      ref={videoRef}
+                      key={`${drama!.id}-${ep.url}-${idx}`}
+                      src={hdUrl(ep.url)}
+                      autoPlay
+                      playsInline
+                      muted={muted}
+                      preload="auto"
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', background: '#000', zIndex: 1 }}
+                      onPlay={() => setPlaying(true)}
+                      onPause={() => setPlaying(false)}
+                      onEnded={() => {
+                        const nextIdx = currentIdx + 1
+                        if (nextIdx >= episodes.length) return
+                        const nextEp = episodes[nextIdx] as EpisodeWithId
+                        const canWatch = nextEp.free || isUnlocked(nextEp) || coins > 0
+                        if (!canWatch) {
+                          setShowNoPoints(true)
+                          return
+                        }
+                        scrollRef.current?.scrollTo({ top: nextIdx * (scrollRef.current.clientHeight), behavior: 'smooth' })
+                      }}
+                      onTimeUpdate={() => {
+                        const v = videoRef.current
+                        if (v && v.duration) {
+                          setProgress((v.currentTime / v.duration) * 100)
+                          setCurrentTime(fmtTime(v.currentTime))
+                          setTotalTime(fmtTime(v.duration))
+                        }
+                      }}
+                      onLoadedMetadata={() => {
+                        const v = videoRef.current
+                        if (v) setTotalTime(fmtTime(v.duration))
+                      }}
+                    />
+                  ) : (
+                    <iframe
+                      key={`${drama!.id}-${ep.ytId}-${idx}`}
+                      src={`https://www.youtube.com/embed/${ep.ytId}?autoplay=1&mute=${muted ? 1 : 0}&loop=1&playlist=${ep.ytId}&controls=0&playsinline=1&rel=0&modestbranding=1`}
+                      allow="autoplay; encrypted-media; picture-in-picture"
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', background: '#000', zIndex: 1 }}
+                    />
+                  )}
                   {/* Preload next episode in background */}
                   {episodes[idx + 1]?.url && (
                     <video

@@ -9,12 +9,12 @@ import {
 import Nav from '@/components/layout/Nav'
 import BottomNav from '@/components/layout/BottomNav'
 import { auth, db } from '@/lib/firebase'
-import { doc, getDoc, updateDoc, collection, getDocs, query, where } from 'firebase/firestore'
+import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, query, where } from 'firebase/firestore'
 import {
   onAuthStateChanged, signOut, updateProfile,
   updatePassword, updateEmail,
   reauthenticateWithCredential, EmailAuthProvider,
-  sendPasswordResetEmail,
+  sendPasswordResetEmail, deleteUser,
 } from 'firebase/auth'
 import type { UserProfile } from '@/types'
 import { useFCM } from '@/lib/useFCM'
@@ -90,6 +90,7 @@ export default function PerfilPage() {
   const [pwSaving, setPwSaving] = useState(false)
   const [emailSaving, setEmailSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   const { permission, requestPermission } = useFCM()
   const fmt = (n: number) => n.toLocaleString('pt-AO')
@@ -172,6 +173,25 @@ export default function PerfilPage() {
         : 'Erro ao alterar email'
       showToast(msg, false)
     } finally { setEmailSaving(false) }
+  }
+
+  /* ── Delete account ── */
+  const handleDeleteAccount = async () => {
+    if (!user || !auth.currentUser || deleteConfirm !== 'ELIMINAR') return
+    setDeleting(true)
+    try {
+      await deleteDoc(doc(db, 'users', user.uid))
+      await deleteUser(auth.currentUser)
+      window.location.href = '/'
+    } catch (e: any) {
+      if (e.code === 'auth/requires-recent-login') {
+        showToast('Por segurança, inicia sessão novamente antes de eliminar a conta', false)
+        await signOut(auth)
+        window.location.href = '/login'
+      } else {
+        showToast('Erro ao eliminar conta', false)
+      }
+    } finally { setDeleting(false) }
   }
 
   /* ── Notifications ── */
@@ -566,9 +586,9 @@ export default function PerfilPage() {
                   Esta acção é permanente e irrecuperável. Todos os teus dados, pontos e histórico serão eliminados.
                 </div>
                 <input value={deleteConfirm} onChange={e => setDeleteConfirm(e.target.value)} style={{ ...st.input, marginBottom: 10, borderColor: deleteConfirm === 'ELIMINAR' ? '#ef4444' : 'rgba(255,255,255,.1)' }} placeholder='Escreve "ELIMINAR" para confirmar'/>
-                <button disabled={deleteConfirm !== 'ELIMINAR'}
-                  style={{ ...st.btn, background: deleteConfirm === 'ELIMINAR' ? 'linear-gradient(135deg,#ef4444,#dc2626)' : 'rgba(239,68,68,.1)', color: deleteConfirm === 'ELIMINAR' ? '#fff' : '#ef4444', opacity: deleteConfirm !== 'ELIMINAR' ? .5 : 1 }}>
-                  <Trash2 size={14}/> Eliminar conta permanentemente
+                <button onClick={handleDeleteAccount} disabled={deleteConfirm !== 'ELIMINAR' || deleting}
+                  style={{ ...st.btn, background: deleteConfirm === 'ELIMINAR' ? 'linear-gradient(135deg,#ef4444,#dc2626)' : 'rgba(239,68,68,.1)', color: deleteConfirm === 'ELIMINAR' ? '#fff' : '#ef4444', opacity: (deleteConfirm !== 'ELIMINAR' || deleting) ? .5 : 1 }}>
+                  <Trash2 size={14}/> {deleting ? 'A eliminar...' : 'Eliminar conta permanentemente'}
                 </button>
               </div>
             </div>

@@ -38,6 +38,13 @@ const PLACEHOLDER_CAST: Record<string, string[]> = {
   acao:        ['Hélder Moreira', 'Sandra Lima', 'Nuno Correia'],
 }
 
+/** Derives a thumbnail image URL for an episode — a Cloudinary video frame or a YouTube thumbnail */
+function episodeThumb(ep: EpisodeWithId): string | null {
+  if (ep.url) return ep.url.replace('/video/upload/', '/video/upload/so_0/').replace(/\.\w+$/, '.jpg')
+  if (ep.ytId) return `https://img.youtube.com/vi/${ep.ytId}/mqdefault.jpg`
+  return null
+}
+
 function fmtViews(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
   if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K'
@@ -147,9 +154,22 @@ function DetalheContent() {
 
   const freeCount   = episodes.filter(e => e.free).length
   const lockedCount = episodes.length - freeCount
-  const cast        = PLACEHOLDER_CAST[drama.genre] ?? ['Ana Silva', 'João Santos']
+  const cast        = (drama.cast && drama.cast.length > 0) ? drama.cast : (PLACEHOLDER_CAST[drama.genre] ?? ['Ana Silva', 'João Santos'])
 
   const similar = allDramas.filter(d => d.id !== drama.id && d.genre === drama.genre).slice(0, 4)
+
+  const [toast, setToast] = useState('')
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/detalhe?id=${drama.id}`
+    if (navigator.share) {
+      await navigator.share({ title: drama.title, text: `Vê "${drama.title}" na ReelStory`, url }).catch(() => {})
+    } else {
+      await navigator.clipboard.writeText(url).catch(() => {})
+      showToast('Link copiado!')
+    }
+  }
 
   /* Firebase — load unlocked episodes + coins (live, so returning from
      /feed after unlocking an episode reflects the latest state) */
@@ -425,6 +445,7 @@ function DetalheContent() {
 
             {/* Share */}
             <button
+              onClick={handleShare}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -520,6 +541,12 @@ function DetalheContent() {
 
       <BottomNav />
 
+      {toast && (
+        <div style={{ position:'fixed', bottom:'5rem', left:'50%', transform:'translateX(-50%)', background:'rgba(20,20,20,.97)', border:'1px solid rgba(255,255,255,.1)', borderRadius:50, padding:'.65rem 1.4rem', color:'#fff', fontSize:'var(--rs-body-sm)', fontWeight:600, boxShadow:'var(--rs-shadow-lg)', zIndex:999, whiteSpace:'nowrap', pointerEvents:'none' }}>
+          {toast}
+        </div>
+      )}
+
       <style>{`
         ::-webkit-scrollbar { display: none; }
       `}</style>
@@ -545,6 +572,7 @@ interface EpisodeCardProps {
 
 function EpisodeCard({ ep, idx, isUnlocked: unlocked, onClick }: EpisodeCardProps) {
   const [hov, setHov] = useState(false)
+  const thumb = episodeThumb(ep)
 
   return (
     <div
@@ -574,8 +602,11 @@ function EpisodeCard({ ep, idx, isUnlocked: unlocked, onClick }: EpisodeCardProp
         flexShrink: 0,
         position: 'relative',
       }}>
-        {/* gradient thumbnail stand-in */}
-        <div style={{ width: '100%', height: '100%', background: 'var(--rs-poster-romance)' }} />
+        {thumb ? (
+          <img src={thumb} alt={ep.title} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: 'var(--rs-poster-romance)' }} />
+        )}
         {/* lock overlay */}
         {!unlocked && (
           <div style={{

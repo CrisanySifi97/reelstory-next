@@ -8,7 +8,8 @@ import Footer from '@/components/layout/Footer'
 import { auth, db } from '@/lib/firebase'
 import { doc, getDoc, updateDoc, arrayRemove } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
-import { DRAMAS, BADGE_STYLE } from '@/lib/mock'
+import { BADGE_STYLE } from '@/lib/mock'
+import { useDramas } from '@/lib/useDramas'
 import type { Drama } from '@/types'
 
 type DramaWithIcon = Drama & { icon: string }
@@ -36,7 +37,10 @@ function ListCard({ drama, onRemove }: { drama: DramaWithIcon; onRemove: () => v
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '2.8rem', position: 'relative', overflow: 'hidden',
         }}>
-          <span dangerouslySetInnerHTML={{ __html: drama.icon }}/>
+          {(drama as any).posterImage
+            ? <img src={(drama as any).posterImage} alt={drama.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top' }} loading="lazy"/>
+            : <span dangerouslySetInnerHTML={{ __html: drama.icon }}/>
+          }
           {drama.badge && (
             <div style={{ position:'absolute', top:8, left:8, fontSize:'.58rem', fontWeight:700, padding:'.2rem .45rem', borderRadius:4, textTransform:'uppercase', letterSpacing:'.5px', ...BADGE_STYLE[drama.badge] }}>
               {drama.badge}
@@ -88,6 +92,7 @@ export default function ListaPage() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery]     = useState('')
   const [toast, setToast]     = useState('')
+  const { dramas: allDramas }  = useDramas()
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
@@ -113,7 +118,7 @@ export default function ListaPage() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
 
-  const dramas = DRAMAS.filter(d => myList.includes(d.id) &&
+  const dramas = allDramas.filter(d => myList.includes(d.id) &&
     (query === '' || d.title.toLowerCase().includes(query.toLowerCase()))
   ) as DramaWithIcon[]
 

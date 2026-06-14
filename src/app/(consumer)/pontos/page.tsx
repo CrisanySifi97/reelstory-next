@@ -6,12 +6,18 @@ import Nav from '@/components/layout/Nav'
 import BottomNav from '@/components/layout/BottomNav'
 import Footer from '@/components/layout/Footer'
 import { auth, db } from '@/lib/firebase'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, collection, getDocs } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 
 const fmt = (n: number) => n.toLocaleString('pt-AO')
 
-const PACKAGES = [
+type Ribbon = { label: string; hot: boolean } | null
+
+const PACKAGES: {
+  key: string; name: string; pts: number; bonus: number; priceKz: number; priceOld: number | null;
+  perPt: string; episodes: number; features: string[]; cta: string; ribbon: Ribbon;
+  Icon: typeof Gift; tier: string; url: string;
+}[] = [
   {
     key:        'basic',
     name:       'Básico',
@@ -138,6 +144,30 @@ export default function PontosPage() {
   const [loggedIn, setLoggedIn] = useState(false)
   const [uid, setUid]         = useState<string | null>(null)
   const [history, setHistory] = useState<{ pts: number; date: string; pkg: string }[]>([])
+  const [packages, setPackages] = useState(PACKAGES)
+
+  // Apply admin overrides (name/pts/bonus/priceKz/badge) from Firestore "packages" collection
+  useEffect(() => {
+    (async () => {
+      try {
+        const snap = await getDocs(collection(db, 'packages'))
+        if (snap.empty) return
+        const overrides = new Map(snap.docs.map(d => [d.id, d.data()]))
+        setPackages(prev => prev.map(pkg => {
+          const o = overrides.get(pkg.key)
+          if (!o) return pkg
+          return {
+            ...pkg,
+            name:    o.name    ?? pkg.name,
+            pts:     o.pts     ?? pkg.pts,
+            bonus:   o.bonus   ?? pkg.bonus,
+            priceKz: o.priceKz ?? pkg.priceKz,
+            ribbon:  o.badge   ? { label: o.badge, hot: pkg.tier === 'popular' } : pkg.ribbon,
+          }
+        }))
+      } catch { /* keep defaults */ }
+    })()
+  }, [])
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
@@ -210,7 +240,7 @@ export default function PontosPage() {
 
         {/* ── Packages grid ── */}
         <div className="pts-grid" style={{ maxWidth: 1240, margin: '0 auto', padding: '0 2rem 2rem', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '1.2rem' }}>
-          {PACKAGES.map(pkg => {
+          {packages.map(pkg => {
             const ts = TIER_STYLES[pkg.tier as keyof typeof TIER_STYLES]
             const isPopular = pkg.tier === 'popular'
             const total = pkg.pts + pkg.bonus

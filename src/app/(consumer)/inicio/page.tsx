@@ -10,8 +10,9 @@ import { BADGE_STYLE } from '@/lib/mock'
 import type { Drama } from '@/types'
 import { useMyList } from '@/lib/useMyList'
 import { useDramas } from '@/lib/useDramas'
-
-const CONTINUE_PROGRESS = [65, 30, 80, 15, 50, 90]
+import { auth, db } from '@/lib/firebase'
+import { doc, onSnapshot } from 'firebase/firestore'
+import { onAuthStateChanged } from 'firebase/auth'
 
 function DramaCard({ drama, size = 'normal', rank, progress, onClick, onToast, onList, inList }: {
   drama: Drama & { icon: string }
@@ -81,6 +82,28 @@ export default function InicioPage() {
   const loaded = !dramasLoading && LIVE_DRAMAS.length > 0
   const { toggle, isInList } = useMyList()
   const showToast = (msg:string) => { setToast(msg); setTimeout(()=>setToast(''),2500) }
+
+  // ── "Continuar a Ver" — based on the user's unlocked episodes ──
+  const [unlockedEps, setUnlockedEps] = useState<string[]>([])
+  useEffect(() => {
+    let unsubDoc = () => {}
+    const unsubAuth = onAuthStateChanged(auth, user => {
+      unsubDoc()
+      if (!user) { setUnlockedEps([]); return }
+      unsubDoc = onSnapshot(doc(db, 'users', user.uid), snap => {
+        setUnlockedEps(snap.exists() ? (snap.data().unlockedEpisodes ?? []) : [])
+      })
+    })
+    return () => { unsubDoc(); unsubAuth() }
+  }, [])
+
+  const continueWatching = LIVE_DRAMAS
+    .map(d => {
+      const unlockedCount = unlockedEps.filter(k => k.startsWith(`${d.id}_`)).length
+      const progress = d.episodes.length > 0 ? Math.round((unlockedCount / d.episodes.length) * 100) : 0
+      return { drama: d, progress }
+    })
+    .filter(({ progress }) => progress > 0 && progress < 100)
 
   const handleList = async (dramaId: string) => {
     const result = await toggle(dramaId)
@@ -193,7 +216,9 @@ export default function InicioPage() {
           </div>
         ))}</>}
         <div style={{ opacity: loaded?1:0, transition:'opacity .4s' }}>
-          <Row title="Continuar a Ver" items={LIVE_DRAMAS.slice(0,6)} cardFn={(d,i)=><DramaCard key={d.id} drama={d} size="continue" progress={CONTINUE_PROGRESS[i]} onClick={()=>router.push(`/detalhe?id=${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
+          {continueWatching.length > 0 && (
+            <Row title="Continuar a Ver" items={continueWatching.map(c=>c.drama)} cardFn={(d,i)=><DramaCard key={d.id} drama={d} size="continue" progress={continueWatching[i].progress} onClick={()=>router.push(`/feed?id=${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
+          )}
           <Row title="Top 10 Angola" items={top10} cardFn={(d,i)=><DramaCard key={d.id} drama={d} size="top10" rank={i+1} onClick={()=>router.push(`/detalhe?id=${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
           <Row title="Novos Episódios" items={novos} cardFn={(d)=><DramaCard key={d.id} drama={d} onClick={()=>router.push(`/detalhe?id=${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
           {(['romance','corporativo','suspense','acao','comedia','terror'] as const).map(g=>(
