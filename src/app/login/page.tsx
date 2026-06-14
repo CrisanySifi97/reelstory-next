@@ -67,7 +67,7 @@ export default function LoginPage() {
     }).catch((err: unknown) => {
       const code = (err as { code?: string }).code ?? ''
       if (code === 'auth/unauthorized-domain')
-        setError('Dominio nao autorizado — adiciona reelstory-next.vercel.app em Firebase Console > Authentication > Authorized domains')
+        setError('Domínio não autorizado — adiciona reelstory-next.vercel.app em Firebase Console > Authentication > Authorized domains')
       else if (code)
         setError(`Erro Google: ${code}`)
     })
@@ -128,21 +128,21 @@ export default function LoginPage() {
       if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential')
         setError('Email ou senha incorretos')
       else if (code === 'auth/email-already-in-use')
-        setError('Este email ja esta em uso')
+        setError('Este email já está em uso')
       else if (code === 'auth/weak-password')
         setError('A senha deve ter pelo menos 6 caracteres')
       else if (code === 'auth/invalid-email')
-        setError('Email invalido')
+        setError('Email inválido')
       else if (code === 'auth/unauthorized-domain')
-        setError('Dominio nao autorizado — adiciona reelstory-next.vercel.app em Firebase Console > Authentication > Settings > Authorized domains')
+        setError('Domínio não autorizado — adiciona reelstory-next.vercel.app em Firebase Console > Authentication > Settings > Authorized domains')
       else if (code === 'auth/operation-not-allowed')
-        setError('Email/Password nao activo — activa em Firebase Console > Authentication > Sign-in method > Email/Password')
+        setError('Email/Password não activo — activa em Firebase Console > Authentication > Sign-in method > Email/Password')
       else if (code === 'auth/invalid-api-key')
-        setError('Chave Firebase invalida — verifica as variaveis no Vercel Dashboard')
+        setError('Chave Firebase inválida — verifica as variáveis no Vercel Dashboard')
       else if (code === 'auth/too-many-requests')
         setError('Muitas tentativas. Aguarda uns minutos e tenta de novo.')
       else if (code === 'auth/network-request-failed')
-        setError('Erro de rede. Verifica a ligacao a internet.')
+        setError('Erro de rede. Verifica a ligação à internet.')
       else
         setError(`Erro: ${code || msg || 'desconhecido'}`)
     } finally { setLoading(false) }
@@ -158,7 +158,7 @@ export default function LoginPage() {
       sessionStorage.removeItem('rs_google_redirect')
       const code = (err as { code?: string }).code ?? ''
       if (code === 'auth/unauthorized-domain')
-        setError('Dominio nao autorizado — adiciona reelstory-next.vercel.app em Firebase Console > Authentication > Authorized domains')
+        setError('Domínio não autorizado — adiciona reelstory-next.vercel.app em Firebase Console > Authentication > Authorized domains')
       else
         setError(`Erro Google: ${code || 'desconhecido'}`)
       setLoading(false)

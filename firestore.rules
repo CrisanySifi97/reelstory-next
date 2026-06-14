@@ -31,10 +31,14 @@ service cloud.firestore {
     // ── Users — owner read/write; admin full access ────────────
     match /users/{uid} {
       allow read:   if isOwner(uid) || isAdmin();
-      // Users can update their own doc but cannot change isAdmin or plan
+      // Users can update their own doc but cannot change isAdmin or plan,
+      // and can only ever decrease their own "coins" (spending points) —
+      // crediting points happens server-side (Kursinha webhook, Admin SDK).
       allow update: if isOwner(uid)
                     && !request.resource.data.diff(resource.data).affectedKeys()
-                        .hasAny(['isAdmin', 'plan', 'status']);
+                        .hasAny(['isAdmin', 'plan', 'status'])
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['coins'])
+                        || request.resource.data.coins <= resource.data.coins);
       allow create: if isOwner(uid);
       allow delete: if isAdmin();
     }
@@ -77,15 +81,24 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ── Episode stats (likes/comments counters) — public read, authenticated write ─
+    // ── Episode stats (likes counter) — public read, authenticated write ─
+    // Clients only ever toggle a like, so "likes" may only move by exactly ±1
+    // (or be created at exactly 1) per write.
     match /episodeStats/{id} {
       allow read: if true;
-      allow write: if isAuth();
+      allow create: if isAuth()
+                    && request.resource.data.likes == 1;
+      allow update: if isAuth()
+                    && request.resource.data.likes is number
+                    && (request.resource.data.likes == resource.data.likes + 1
+                        || request.resource.data.likes == resource.data.likes - 1);
     }
 
-    // ── Notifications (push history) — admin only ─────────────
+    // ── Notifications (push history) — public read, admin write ─
+    // Read by all signed-in users (notification bell in the nav); only the
+    // admin can send/create notifications.
     match /notifications/{id} {
-      allow read:  if isAdmin();
+      allow read:  if isAuth();
       allow write: if isAdmin();
     }
   }

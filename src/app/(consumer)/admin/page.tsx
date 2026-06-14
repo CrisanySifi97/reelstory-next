@@ -337,7 +337,7 @@ export default function AdminPage() {
         badge:       form.badge || null,
         views:       parseInt(form.views) || 0,
         year:        parseInt(form.year) || new Date().getFullYear(),
-        icon:        form.icon || 'ðŸŽ¬',
+        icon:        form.icon || '🎬',
         cast:        form.cast ? form.cast.split(',').map(s=>s.trim()).filter(Boolean) : [],
       }
       const episodes: Episode[] = formEps
@@ -389,7 +389,7 @@ export default function AdminPage() {
   }
   const handleToggleStatus = async (u: UserProfile & {_id:string}) => {
     const next = u.status==='Ativo' ? 'Suspenso' : 'Ativo'
-    await updateDoc(doc(db,'users',u._id), { status:next }); showToast(`${u.name} â†' ${next}`); loadUsers()
+    await updateDoc(doc(db,'users',u._id), { status:next }); showToast(`${u.name} → ${next}`); loadUsers()
   }
   const handleOrderStatus = async (o: Order & {_id:string}, status:'Aprovado'|'Rejeitado') => {
     await updateDoc(doc(db,'orders',o._id), { status })
@@ -523,12 +523,12 @@ export default function AdminPage() {
 
         <div className="content">
 
-          {/* â•â• DASHBOARD â•â• */}
+          {/* ══ DASHBOARD ══ */}
           {section==='dashboard' && (<>
             <div className="kpis">
               <div className="kpi k1">
                 <div className="kpi-lbl">Utilizadores activos</div>
-                <div className="kpi-val">{users.length>0?fmt(users.length):'â€"'}</div>
+                <div className="kpi-val">{users.length>0?fmt(users.length):'—'}</div>
                 <div className="kpi-d up"><TrendingUp size={12}/>{users.length} registados</div>
                 <div className="kpi-ic"><Users size={18}/></div>
               </div>
@@ -647,7 +647,7 @@ export default function AdminPage() {
             </div>
           </>)}
 
-          {/* â•â• SÉRIES â•â• */}
+          {/* ══ SÉRIES ══ */}
           {section==='series' && (<>
             {showForm && (
               <div className="modal-bg" onClick={()=>{setShowForm(false);setEditId(null);setFormEps([])}}>
@@ -662,7 +662,7 @@ export default function AdminPage() {
                 <div style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'1rem', background:'var(--rs-bg-cool-3)', borderRadius:12, marginBottom:'1.2rem', border:'1px solid var(--rs-border-soft)' }}>
                   <div style={{ width:64, height:88, borderRadius:10, background:form.posterGrad||'var(--rs-poster-romance)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.8rem', flexShrink:0, overflow:'hidden', position:'relative' }}>
                     {form.posterImage && <img src={form.posterImage} alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} />}
-                    {form.icon || 'ðŸŽ¬'}
+                    {form.icon || '🎬'}
                   </div>
                   <div>
                     <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1rem', marginBottom:'.2rem' }}>{form.title||'Título da série'}</div>
@@ -675,7 +675,7 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Row 1 â€" main info */}
+                {/* Row 1 — main info */}
                 <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:10, marginBottom:10 }}>
                   <div><label className="field-lbl">Título *</label><input className="field-in" value={form.title} onChange={e=>setForm(p=>({...p,title:e.target.value}))} placeholder="Ex: Amor Proibido"/></div>
                   <div><label className="field-lbl">Género *</label>
@@ -691,15 +691,15 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Row 2 â€" numbers */}
+                {/* Row 2 — numbers */}
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:10, marginBottom:10 }}>
                   <div><label className="field-lbl">Ano</label><input className="field-in" type="number" min={2000} max={2030} value={form.year} onChange={e=>setForm(p=>({...p,year:e.target.value}))} placeholder="2025"/></div>
                   <div><label className="field-lbl">Visualizações iniciais</label><input className="field-in" type="number" min={0} value={form.views} onChange={e=>setForm(p=>({...p,views:e.target.value}))} placeholder="0"/></div>
-                  <div><label className="field-lbl">Rating inicial (0â€"5)</label><input className="field-in" type="number" min={0} max={5} step={.1} value={form.rating} onChange={e=>setForm(p=>({...p,rating:e.target.value}))} placeholder="4.5"/></div>
+                  <div><label className="field-lbl">Rating inicial (0—5)</label><input className="field-in" type="number" min={0} max={5} step={.1} value={form.rating} onChange={e=>setForm(p=>({...p,rating:e.target.value}))} placeholder="4.5"/></div>
                   <div>
-                    <label className="field-lbl">Ãcone / Emoji</label>
+                    <label className="field-lbl">Ícone / Emoji</label>
                     <div style={{ display:'flex', gap:4 }}>
-                      <input className="field-in" value={form.icon} onChange={e=>setForm(p=>({...p,icon:e.target.value}))} placeholder="ðŸ'•" style={{ flex:1 }}/>
+                      <input className="field-in" value={form.icon} onChange={e=>setForm(p=>({...p,icon:e.target.value}))} placeholder="💕" style={{ flex:1 }}/>
                     </div>
                     <div style={{ display:'flex', gap:4, marginTop:5, flexWrap:'wrap' }}>
                       {(GENRE_ICONS[form.genre]||[]).map(ic=>(
@@ -709,7 +709,7 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Row 3 â€" descriptions */}
+                {/* Row 3 — descriptions */}
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
                   <div>
                     <label className="field-lbl">Sinopse curta (aparece nos cards)</label>
@@ -725,7 +725,7 @@ export default function AdminPage() {
                   <textarea className="field-in" value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} rows={3} placeholder="Descrição detalhada da série..." style={{ resize:'vertical' }}/>
                 </div>
 
-                {/* Row 4 â€" poster image + colour */}
+                {/* Row 4 — poster image + colour */}
                 <div style={{ marginBottom:14 }}>
                   <label className="field-lbl">Imagem da capa (recomendado: 2:3, ex: 600×900px)</label>
                   <ImageUpload
@@ -802,7 +802,7 @@ export default function AdminPage() {
                             className="field-in"
                             value={ep.title}
                             onChange={e=>setFormEps(p=>p.map((x,j)=>j===i?{...x,title:e.target.value}:x))}
-                            placeholder={`Ep. ${i+1} â€" título`}
+                            placeholder={`Ep. ${i+1} — título`}
                             style={{ padding:'.45rem .7rem' }}
                           />
                           {/* YT ID */}
@@ -930,7 +930,7 @@ export default function AdminPage() {
             </div>
           </>)}
 
-          {/* â•â• UTILIZADORES â•â• */}
+          {/* ══ UTILIZADORES ══ */}
           {section==='utilizadores' && (
             <div className="card" style={{ padding:0, overflow:'hidden' }}>
               <table>
@@ -959,7 +959,7 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* â•â• EPISÃ"DIOS â•â• */}
+          {/* ══ EPISÓDIOS ══ */}
           {section==='episodios' && (() => {
             const allDramaList = dramas.length>0?dramas:MOCK_DRAMAS.map(d=>({...d,_id:d.id})) as (Drama&{_id:string})[]
             const allEps = allDramaList.flatMap(d=>(d.episodes||[]).map(e=>({...e,dramaId:d._id,dramaTitle:d.title,posterGrad:d.posterGrad})))
@@ -1011,7 +1011,7 @@ export default function AdminPage() {
             </>)
           })()}
 
-          {/* â•â• ENCOMENDAS â•â• */}
+          {/* ══ ENCOMENDAS ══ */}
           {section==='encomendas' && (
             <div className="card" style={{ padding:0, overflow:'hidden' }}>
               <table>
@@ -1029,7 +1029,7 @@ export default function AdminPage() {
                           <button onClick={()=>handleOrderStatus(o,'Aprovado')} className="act-btn" style={{ background:'rgba(34,197,94,.15)', color:'#22c55e', width:'auto', padding:'0 .6rem', gap:4, fontSize:'.75rem', fontWeight:700 }}><CheckCircle size={11}/>Aprovar</button>
                           <button onClick={()=>handleOrderStatus(o,'Rejeitado')} className="act-btn" style={{ background:'rgba(239,68,68,.12)', color:'#ef4444', width:'auto', padding:'0 .6rem', gap:4, fontSize:'.75rem', fontWeight:700 }}><XCircle size={11}/>Rejeitar</button>
                         </div>
-                      ):<span style={{ color:'var(--rs-text-muted)', fontSize:'.78rem' }}>â€"</span>}</td>
+                      ):<span style={{ color:'var(--rs-text-muted)', fontSize:'.78rem' }}>—</span>}</td>
                     </tr>
                   )) : <tr><td colSpan={6} style={{ textAlign:'center', padding:'3rem', color:'var(--rs-text-muted)' }}>Nenhuma encomenda ainda.</td></tr>}
                 </tbody>
@@ -1037,7 +1037,7 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* â•â• AVALIAÇÃ•ES â•â• */}
+          {/* ══ AVALIAÇÕES ══ */}
           {section==='avaliacoes' && (() => {
             const byDrama: Record<string,{dramaId:string;count:number;total:number;dist:Record<number,number>}> = {}
             ratings.forEach(r=>{
@@ -1089,11 +1089,11 @@ export default function AdminPage() {
                     <tbody>{ratings.slice(0,20).map((r,i)=>(
                       <tr key={r._id||i}>
                         <td style={{ fontWeight:600 }}>{getDramaTitle(r.dramaId)}</td>
-                        <td style={{ color:'var(--rs-text-muted)', fontFamily:'monospace', fontSize:'.75rem' }}>{r.userId.slice(0,14)}â€¦</td>
+                        <td style={{ color:'var(--rs-text-muted)', fontFamily:'monospace', fontSize:'.75rem' }}>{r.userId.slice(0,14)}…</td>
                         <td><div style={{ display:'flex', gap:2 }}>{[1,2,3,4,5].map(n=>(
                           <svg key={n} width={13} height={13} viewBox="0 0 24 24" fill={n<=r.rating?'#FFD93D':'none'} stroke={n<=r.rating?'#FFD93D':'rgba(255,255,255,.2)'} strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                         ))}</div></td>
-                        <td style={{ color:'var(--rs-text-muted)', fontSize:'.78rem' }}>{r.updatedAt?new Date(r.updatedAt.seconds*1000).toLocaleDateString('pt-AO'):'â€"'}</td>
+                        <td style={{ color:'var(--rs-text-muted)', fontSize:'.78rem' }}>{r.updatedAt?new Date(r.updatedAt.seconds*1000).toLocaleDateString('pt-AO'):'—'}</td>
                       </tr>
                     ))}</tbody>
                   </table>
@@ -1102,7 +1102,7 @@ export default function AdminPage() {
             </>)
           })()}
 
-          {/* â•â• PACOTES DE PONTOS â•â• */}
+          {/* ══ PACOTES DE PONTOS ══ */}
           {section==='pacotes' && (<>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:'1rem', marginBottom:'1.5rem' }}>
               {pkgs.map((pkg,i)=>{
@@ -1150,7 +1150,7 @@ export default function AdminPage() {
             </div>
           </>)}
 
-          {/* â•â• CAMPANHAS â•â• */}
+          {/* ══ CAMPANHAS ══ */}
           {section==='campanhas' && (<>
             <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:'1rem' }}>
               <button onClick={()=>{setCampForm(emptyCamp());setCampEditId(null);setShowCampForm(true)}} className="btn-primary"><Plus size={15}/>Nova campanha</button>
@@ -1211,14 +1211,14 @@ export default function AdminPage() {
                       </div>
                     </div>
                     {c.description && <div style={{ fontSize:'.78rem', color:'var(--rs-text-muted)', marginBottom:'.5rem', lineHeight:1.5 }}>{c.description}</div>}
-                    {(c.startDate||c.endDate) && <div style={{ fontSize:'.72rem', color:'var(--rs-text-muted)' }}>{c.startDate} â†' {c.endDate||'sem fim'}</div>}
+                    {(c.startDate||c.endDate) && <div style={{ fontSize:'.72rem', color:'var(--rs-text-muted)' }}>{c.startDate} → {c.endDate||'sem fim'}</div>}
                   </div>
                 ))}
               </div>
             )}
           </>)}
 
-          {/* â•â• NOTIFICAÇÃ•ES PUSH â•â• */}
+          {/* ══ NOTIFICAÇÕES PUSH ══ */}
           {section==='notificacoes' && (<>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1.5rem' }}>
               {/* Send form */}
@@ -1244,7 +1244,7 @@ export default function AdminPage() {
                     <div>
                       <div style={{ fontSize:'.84rem', fontWeight:700, marginBottom:'.2rem' }}>{notifForm.title||'Título da notificação'}</div>
                       <div style={{ fontSize:'.78rem', color:'var(--rs-text-muted)', lineHeight:1.4 }}>{notifForm.body||'Mensagem da notificação aparece aqui...'}</div>
-                      {notifForm.url && <div style={{ fontSize:'.72rem', color:'var(--rs-primary)', marginTop:'.3rem' }}>â†' {notifForm.url}</div>}
+                      {notifForm.url && <div style={{ fontSize:'.72rem', color:'var(--rs-primary)', marginTop:'.3rem' }}>→ {notifForm.url}</div>}
                     </div>
                   </div>
                 </div>
@@ -1261,9 +1261,9 @@ export default function AdminPage() {
                       <tr key={n._id||i}>
                         <td style={{ fontWeight:600, maxWidth:150 }}>{n.title}</td>
                         <td style={{ color:'var(--rs-text-muted)', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{n.body}</td>
-                        <td style={{ color:'var(--rs-primary)', fontSize:'.78rem' }}>{n.url||'â€"'}</td>
+                        <td style={{ color:'var(--rs-primary)', fontSize:'.78rem' }}>{n.url||'—'}</td>
                         <td className="gold">{fmt(n.count||0)} users</td>
-                        <td style={{ color:'var(--rs-text-muted)', fontSize:'.78rem' }}>{n.sentAt?new Date(n.sentAt.seconds*1000).toLocaleDateString('pt-AO'):'â€"'}</td>
+                        <td style={{ color:'var(--rs-text-muted)', fontSize:'.78rem' }}>{n.sentAt?new Date(n.sentAt.seconds*1000).toLocaleDateString('pt-AO'):'—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1272,14 +1272,14 @@ export default function AdminPage() {
             )}
           </>)}
 
-          {/* â•â• ANALYTICS â•â• */}
+          {/* ══ ANALYTICS ══ */}
           {section==='analytics' && (() => {
             const allDramaList = dramas.length>0?dramas:MOCK_DRAMAS.map(d=>({...d,_id:d.id})) as (Drama&{_id:string})[]
             const totalEps = allDramaList.reduce((s,d)=>s+(d.episodes?.length||0),0)
             const totalViews = allDramaList.reduce((s,d)=>s+(d.views||0),0)
             const byPlan = users.reduce((acc,u)=>{ acc[u.plan]=(acc[u.plan]||0)+1; return acc },{} as Record<string,number>)
             const topSeries = [...allDramaList].sort((a,b)=>(b.views||0)-(a.views||0)).slice(0,5)
-            const avgRating = ratings.length>0?(ratings.reduce((s,r)=>s+r.rating,0)/ratings.length).toFixed(1):'â€"'
+            const avgRating = ratings.length>0?(ratings.reduce((s,r)=>s+r.rating,0)/ratings.length).toFixed(1):'—'
             const revenue = orders.filter(o=>o.status==='Aprovado').reduce((s,o)=>s+parseFloat((o.amount||'0').replace(/\D/g,'')),0)
             const planColors: Record<string,string> = { Gratuito:'#8892A4', Starter:'#22c55e', Premium:'var(--rs-primary)', VIP:'var(--rs-accent)' }
             return (<>
@@ -1359,7 +1359,7 @@ export default function AdminPage() {
             </>)
           })()}
 
-          {/* â•â• BANNERS â•â• */}
+          {/* ══ BANNERS ══ */}
           {section==='banners' && (() => {
             const allDramaList = dramas.length>0?dramas:MOCK_DRAMAS.map(d=>({...d,_id:d.id})) as (Drama&{_id:string})[]
             const tabs: {id:BannerPage;label:string;url:string}[] = [
@@ -1388,7 +1388,7 @@ export default function AdminPage() {
               {bannerTab==='landing' && (
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1.5rem' }}>
                   <div className="card">
-                    <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1rem', marginBottom:'1.2rem' }}>Banner â€" Página Inicial</div>
+                    <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1rem', marginBottom:'1.2rem' }}>Banner — Página Inicial</div>
                     <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:'1rem' }}>
                       <div><label className="field-lbl">Título principal</label><input className="field-in" value={bLanding.title} onChange={e=>setBLanding(p=>({...p,title:e.target.value}))} placeholder="Ex: Dramas asiáticos na ponta dos dedos"/></div>
                       <div><label className="field-lbl">Subtítulo / Descrição</label><textarea className="field-in" value={bLanding.subtitle} onChange={e=>setBLanding(p=>({...p,subtitle:e.target.value}))} rows={2} style={{ resize:'vertical' }}/></div>
@@ -1461,7 +1461,7 @@ export default function AdminPage() {
               {bannerTab==='login' && (
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1.5rem' }}>
                   <div className="card">
-                    <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1rem', marginBottom:'1.2rem' }}>Banner â€" Página de Login</div>
+                    <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1rem', marginBottom:'1.2rem' }}>Banner — Página de Login</div>
                     <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:'1rem' }}>
                       <div><label className="field-lbl">Tagline (abaixo do logo)</label><input className="field-in" value={bLogin.tagline} onChange={e=>setBLogin(p=>({...p,tagline:e.target.value}))}/></div>
                       <div style={{ fontSize:'.72rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'.6px', color:'var(--rs-text-muted)', margin:'4px 0 2px' }}>Estatísticas (3 pills)</div>
@@ -1509,8 +1509,8 @@ export default function AdminPage() {
                       <div style={{ display:'flex', justifyContent:'center', gap:'1.5rem', flexWrap:'wrap' }}>
                         {[[bLogin.s1n,bLogin.s1l],[bLogin.s2n,bLogin.s2l],[bLogin.s3n,bLogin.s3l]].map(([n,l],i)=>(
                           <div key={i} style={{ textAlign:'center' }}>
-                            <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1.2rem', color:'var(--rs-primary)' }}>{n||'â€"'}</div>
-                            <div style={{ fontSize:'.68rem', color:'rgba(255,255,255,.5)', textTransform:'uppercase', letterSpacing:'.5px' }}>{l||'â€"'}</div>
+                            <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1.2rem', color:'var(--rs-primary)' }}>{n||'—'}</div>
+                            <div style={{ fontSize:'.68rem', color:'rgba(255,255,255,.5)', textTransform:'uppercase', letterSpacing:'.5px' }}>{l||'—'}</div>
                           </div>
                         ))}
                       </div>
@@ -1523,7 +1523,7 @@ export default function AdminPage() {
               {bannerTab==='inicio' && (
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1.5rem' }}>
                   <div className="card">
-                    <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1rem', marginBottom:'1.2rem' }}>Banner â€" Início (Série em Destaque)</div>
+                    <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1rem', marginBottom:'1.2rem' }}>Banner — Início (Série em Destaque)</div>
                     <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:'1rem' }}>
                       <div>
                         <label className="field-lbl">Série em destaque no Hero</label>
@@ -1580,7 +1580,7 @@ export default function AdminPage() {
               {bannerTab==='explorar' && (
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1.5rem' }}>
                   <div className="card">
-                    <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1rem', marginBottom:'1.2rem' }}>Banner â€" Explorar (EM DESTAQUE)</div>
+                    <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1rem', marginBottom:'1.2rem' }}>Banner — Explorar (EM DESTAQUE)</div>
                     <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:'1rem' }}>
                       <div>
                         <label className="field-lbl">Série em destaque</label>
@@ -1623,7 +1623,7 @@ export default function AdminPage() {
                       if (!d) return null
                       return (
                         <div style={{ borderRadius:14, height:180, background:d.posterGrad||'var(--rs-poster-romance)', border:'1px solid var(--rs-border-base)', position:'relative', overflow:'hidden', display:'flex', alignItems:'flex-end' }}>
-                          <div style={{ position:'absolute', right:'5%', top:'50%', transform:'translateY(-50%)', fontSize:'4rem', opacity:.3 }} dangerouslySetInnerHTML={{ __html:(d as any).icon||'ðŸŽ¬' }}/>
+                          <div style={{ position:'absolute', right:'5%', top:'50%', transform:'translateY(-50%)', fontSize:'4rem', opacity:.3 }} dangerouslySetInnerHTML={{ __html:(d as any).icon||'🎬' }}/>
                           <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right,rgba(0,0,0,.85) 0%,rgba(0,0,0,.1) 70%)' }}/>
                           <div style={{ position:'relative', zIndex:1, padding:'1rem' }}>
                             <div style={{ display:'inline-block', background:'rgba(255,56,92,.25)', border:'1px solid rgba(255,56,92,.5)', borderRadius:50, padding:'.15rem .6rem', fontSize:'.65rem', fontWeight:700, color:'var(--rs-primary)', marginBottom:'.5rem' }}>{bExplorar.badgeText||'EM DESTAQUE'}</div>
@@ -1643,7 +1643,7 @@ export default function AdminPage() {
       </div>
     </div>
 
-    {/* â•â• EPISODE MODAL â•â• */}
+    {/* ══ EPISODE MODAL ══ */}
     {epDrama && (
       <div className="modal-bg" onClick={()=>setEpDrama(null)}>
         <div className="modal-box" onClick={e=>e.stopPropagation()}>
@@ -1660,7 +1660,7 @@ export default function AdminPage() {
                   <div style={{ fontSize:'.85rem', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{ep.title}</div>
                   <div style={{ fontSize:'.72rem', color:'var(--rs-text-muted)', display:'flex', gap:'.5rem', marginTop:2 }}>
                     <span style={{ fontFamily:'monospace', fontSize:'.7rem' }}>{ep.url ? ep.url.split('/').slice(-2).join('/') : (ep.ytId||'—')}</span>
-                    {ep.free && <span style={{ color:'#22c55e', fontWeight:700 }}>GRÃTIS</span>}
+                    {ep.free && <span style={{ color:'#22c55e', fontWeight:700 }}>GRÁTIS</span>}
                   </div>
                 </div>
                 {(ep.url||ep.ytId) && <a href={ep.url||`https://youtu.be/${ep.ytId}`} target="_blank" rel="noopener" style={{ color:'var(--rs-text-muted)', display:'flex' }}><PlayCircle size={16}/></a>}
@@ -1689,7 +1689,7 @@ export default function AdminPage() {
       </div>
     )}
 
-    {/* â•â• COIN MODAL â•â• */}
+    {/* ══ COIN MODAL ══ */}
     {coinUser && (
       <div className="modal-bg" onClick={()=>setCoinUser(null)}>
         <div className="modal-box" style={{ maxWidth:400 }} onClick={e=>e.stopPropagation()}>
@@ -1699,7 +1699,7 @@ export default function AdminPage() {
             <div>
               <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'1.15rem', letterSpacing:'-.01em' }}>Gerir Pontos</div>
               <div style={{ fontSize:'.75rem', color:'var(--rs-text-muted)', marginTop:2, letterSpacing:'.2px' }}>
-                {coinMode==='dar' ? 'Adicionar pontos Ã  conta' : 'Remover pontos da conta'}
+                {coinMode==='dar' ? 'Adicionar pontos à conta' : 'Remover pontos da conta'}
               </div>
             </div>
             <button onClick={()=>setCoinUser(null)} style={{ background:'none', border:'none', color:'var(--rs-text-muted)', cursor:'pointer', display:'flex', padding:4 }}><X size={18}/></button>

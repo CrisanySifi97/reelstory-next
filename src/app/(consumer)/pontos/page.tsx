@@ -11,6 +11,9 @@ import { onAuthStateChanged } from 'firebase/auth'
 
 const fmt = (n: number) => n.toLocaleString('pt-AO')
 
+// Points cost to unlock one episode (matches EPISODE_COST in feed/detalhe pages)
+const EPISODE_COST = 10
+
 type Ribbon = { label: string; hot: boolean } | null
 
 const PACKAGES: {
@@ -146,7 +149,9 @@ export default function PontosPage() {
   const [history, setHistory] = useState<{ pts: number; date: string; pkg: string }[]>([])
   const [packages, setPackages] = useState(PACKAGES)
 
-  // Apply admin overrides (name/pts/bonus/priceKz/badge) from Firestore "packages" collection
+  // Apply admin overrides (name/pts/bonus/priceKz/badge) from Firestore "packages" collection,
+  // recomputing the derived fields (episodes, per-point price, feature copy) so the card
+  // stays consistent with the overridden numbers.
   useEffect(() => {
     (async () => {
       try {
@@ -156,13 +161,22 @@ export default function PontosPage() {
         setPackages(prev => prev.map(pkg => {
           const o = overrides.get(pkg.key)
           if (!o) return pkg
+          const pts     = o.pts     ?? pkg.pts
+          const bonus   = o.bonus   ?? pkg.bonus
+          const priceKz = o.priceKz ?? pkg.priceKz
+          const total    = pts + bonus
+          const episodes = Math.floor(total / EPISODE_COST)
+          const perPt    = `Kz ${(priceKz / total).toFixed(1).replace('.', ',')} por ponto`
+          const features = pkg.features.map(f =>
+            f.endsWith('episódios desbloqueados') ? `${episodes} episódios desbloqueados`
+            : f.endsWith('pts bónus incluídos')    ? `+${fmt(bonus)} pts bónus incluídos`
+            : f
+          )
           return {
             ...pkg,
-            name:    o.name    ?? pkg.name,
-            pts:     o.pts     ?? pkg.pts,
-            bonus:   o.bonus   ?? pkg.bonus,
-            priceKz: o.priceKz ?? pkg.priceKz,
-            ribbon:  o.badge   ? { label: o.badge, hot: pkg.tier === 'popular' } : pkg.ribbon,
+            name: o.name ?? pkg.name,
+            pts, bonus, priceKz, episodes, perPt, features,
+            ribbon: o.badge ? { label: o.badge, hot: pkg.tier === 'popular' } : pkg.ribbon,
           }
         }))
       } catch { /* keep defaults */ }

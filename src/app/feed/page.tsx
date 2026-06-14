@@ -213,7 +213,9 @@ function FeedContent() {
 
   const dramaId2 = drama?.id ?? ''
   const isUnlocked = (ep: EpisodeWithId) => ep.free || unlocked.has(`${dramaId2}_${ep.id}`)
-  const epKey = (ep: EpisodeWithId) => `${dramaId2}_${ep.id ?? ep.order}`
+  // Same key format as isUnlocked/the unlock-deduction logic — episodes always have an `id`
+  // (assigned by the admin), so no need for an `ep.order` fallback here.
+  const epKey = (ep: EpisodeWithId) => `${dramaId2}_${ep.id}`
 
   /* ── Load like counts for the current episode ── */
   useEffect(() => {

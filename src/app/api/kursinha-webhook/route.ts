@@ -17,11 +17,21 @@ function getAdminDb() {
   return getFirestore()
 }
 
-const PACKAGE_MAP: Record<string, { pts: number; bonus: number; name: string; priceKz: number }> = {
-  '6a01a97460b5a002d3e34d85': { pts: 100,  bonus: 0,   name: 'Basico',    priceKz: 1000  },
-  '6a01aa75f10214290866c137': { pts: 550,  bonus: 50,  name: 'Popular',   priceKz: 4500  },
-  '6a01ab0a9b9ba2580ae9aee7': { pts: 1400, bonus: 200, name: 'Mega',      priceKz: 9900  },
-  '6a01aba1f10214290866c138': { pts: 4000, bonus: 500, name: 'Ultra VIP', priceKz: 24900 },
+// checkoutId -> package key (matches the doc IDs in the Firestore "packages" collection,
+// which the admin "Pacotes" section edits)
+const CHECKOUT_TO_KEY: Record<string, string> = {
+  '6a01a97460b5a002d3e34d85': 'basic',
+  '6a01aa75f10214290866c137': 'popular',
+  '6a01ab0a9b9ba2580ae9aee7': 'mega',
+  '6a01aba1f10214290866c138': 'vip',
+}
+
+// Defaults — used when the admin hasn't overridden a package in Firestore yet
+const PACKAGE_DEFAULTS: Record<string, { pts: number; bonus: number; name: string; priceKz: number }> = {
+  basic:   { pts: 100,  bonus: 0,   name: 'Basico',    priceKz: 1000  },
+  popular: { pts: 550,  bonus: 50,  name: 'Popular',   priceKz: 4500  },
+  mega:    { pts: 1400, bonus: 200, name: 'Mega',      priceKz: 9900  },
+  vip:     { pts: 4000, bonus: 500, name: 'Ultra VIP', priceKz: 24900 },
 }
 
 export async function POST(req: NextRequest) {
@@ -47,8 +57,8 @@ export async function POST(req: NextRequest) {
     if (!userId)     return NextResponse.json({ error: 'no userId'  }, { status: 400 })
     if (!checkoutId) return NextResponse.json({ error: 'no checkoutId' }, { status: 400 })
 
-    const pkg = PACKAGE_MAP[checkoutId]
-    if (!pkg) return NextResponse.json({ error: 'unknown package' }, { status: 400 })
+    const pkgKey = CHECKOUT_TO_KEY[checkoutId]
+    if (!pkgKey) return NextResponse.json({ error: 'unknown package' }, { status: 400 })
 
     const db = getAdminDb()
 
@@ -63,59 +73,68 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Merge admin overrides from the "packages" collection (edited via the admin "Pacotes"
+    // section) on top of the hardcoded defaults, so price/point changes there actually
+    // affect what gets credited.
+    const overrideSnap = await db.collection('packages').doc(pkgKey).get()
+    const pkg = { ...PACKAGE_DEFAULTS[pkgKey], ...overrideSnap.data() }
     const totalPts = pkg.pts + pkg.bonus
 
-    // Credit user
-    await db.collection('users').doc(userId).update({
-      coins: FieldValue.increment(totalPts),
-      pointsHistory: FieldValue.arrayUnion({
-        pkg: pkg.name,
-        pts: totalPts,
-        date: new Date().toLocaleDateString('pt-AO'),
-        orderId,
-      }),
-    })
-
-    // ── Referral bonus: 100 pts to referrer on first purchase ──
-    // Wrapped in a transaction so the "already paid" check and the write are atomic,
-    // preventing a double payout if the webhook fires twice for the same user.
+    // Credit user, pay referral bonus and save the order atomically.
+    // Firestore transactions require all reads before any writes.
+    const orderRef = db.collection('orders').doc()
     await db.runTransaction(async (tx: Transaction) => {
       const userRef  = db.collection('users').doc(userId)
       const userSnap = await tx.get(userRef)
       const userData = userSnap.data()
-      if (!userData?.referredBy || userData?.referralBonusPaid) return
 
-      const referrersSnap = await tx.get(
-        db.collection('users').where('referralCode', '==', userData.referredBy).limit(1)
-      )
-      if (referrersSnap.empty) return
+      let referrerId: string | null = null
+      if (userData?.referredBy && !userData?.referralBonusPaid) {
+        const referrersSnap = await tx.get(
+          db.collection('users').where('referralCode', '==', userData.referredBy).limit(1)
+        )
+        if (!referrersSnap.empty) referrerId = referrersSnap.docs[0].id
+      }
 
-      const referrerId = referrersSnap.docs[0].id
-      tx.update(db.collection('users').doc(referrerId), {
-        coins: FieldValue.increment(100),
+      const userUpdate: Record<string, unknown> = {
+        coins: FieldValue.increment(totalPts),
         pointsHistory: FieldValue.arrayUnion({
-          pkg: 'Convite',
-          pts: 100,
+          pkg: pkg.name,
+          pts: totalPts,
           date: new Date().toLocaleDateString('pt-AO'),
-          note: `Bônus por convite de ${userData.name || userId}`,
+          orderId,
         }),
-      })
-      tx.update(userRef, { referralBonusPaid: true })
-    })
+      }
 
-    // Save order record
-    await db.collection('orders').add({
-      userId,
-      userEmail:        data.email ?? '',
-      userName:         data.name  ?? '',
-      type:             'points',
-      package:          pkg.name,
-      points:           totalPts,
-      amount:           String(data.amount ?? pkg.priceKz),
-      method:           'Kursinha',
-      status:           'Aprovado',
-      kursinhaOrderId:  orderId,
-      createdAt:        FieldValue.serverTimestamp(),
+      // ── Referral bonus: 100 pts to referrer on first purchase ──
+      if (referrerId) {
+        userUpdate.referralBonusPaid = true
+        tx.update(db.collection('users').doc(referrerId), {
+          coins: FieldValue.increment(100),
+          pointsHistory: FieldValue.arrayUnion({
+            pkg: 'Convite',
+            pts: 100,
+            date: new Date().toLocaleDateString('pt-AO'),
+            note: `Bônus por convite de ${userData!.name || userId}`,
+          }),
+        })
+      }
+
+      tx.update(userRef, userUpdate)
+
+      tx.set(orderRef, {
+        userId,
+        userEmail:        data.email ?? '',
+        userName:         data.name  ?? '',
+        type:             'points',
+        package:          pkg.name,
+        points:           totalPts,
+        amount:           String(data.amount ?? pkg.priceKz),
+        method:           'Kursinha',
+        status:           'Aprovado',
+        kursinhaOrderId:  orderId,
+        createdAt:        FieldValue.serverTimestamp(),
+      })
     })
 
     return NextResponse.json({ ok: true, pts: totalPts })
