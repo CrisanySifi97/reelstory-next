@@ -243,11 +243,14 @@ function FeedContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showNoPoints])
 
-  /* ── Auto-play when episode changes and is accessible ── */
+  /* ── Auto-play only the episode the user tapped to open ──
+     Scrolling to other episodes should not start playback on its own —
+     the user has to tap to play those. */
+  const autoPlayedRef = useRef(false)
   useEffect(() => {
-    if (showNoPoints) return
+    if (showNoPoints || autoPlayedRef.current || currentIdx !== startEp) return
     const v = videoRef.current
-    if (v && v.paused) tryPlay()
+    if (v && v.paused) { tryPlay(); autoPlayedRef.current = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx])
 
@@ -419,7 +422,6 @@ function FeedContent() {
                       ref={videoRef}
                       key={`${drama!.id}-${ep.url}-${idx}`}
                       src={hdUrl(ep.url)}
-                      autoPlay
                       playsInline
                       muted={muted}
                       preload="auto"
