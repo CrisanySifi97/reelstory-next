@@ -76,6 +76,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ── Episode stats (likes/comments counters) — public read, authenticated write ─
+    match /episodeStats/{id} {
+      allow read: if true;
+      allow write: if isAuth();
+    }
+
     // ── Notifications (push history) — admin only ─────────────
     match /notifications/{id} {
       allow read:  if isAdmin();

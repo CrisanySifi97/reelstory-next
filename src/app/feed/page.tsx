@@ -8,9 +8,9 @@ import {
 } from 'lucide-react'
 import { auth, db } from '@/lib/firebase'
 import {
-  doc, getDoc, updateDoc, addDoc, getDocs,
+  doc, getDoc, setDoc, updateDoc, addDoc, getDocs,
   collection, query, where, orderBy, limit,
-  serverTimestamp, arrayUnion, arrayRemove,
+  serverTimestamp, arrayUnion, arrayRemove, increment,
 } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useDrama } from '@/lib/useDramas'
@@ -61,8 +61,8 @@ function NoPointsSheet() {
 }
 
 /* ── Comments bottom sheet ── */
-function CommentsSheet({ episodeKey, uid, userName, onClose }: {
-  episodeKey: string; uid: string | null; userName: string; onClose: () => void
+function CommentsSheet({ episodeKey, uid, userName, onClose, onSent }: {
+  episodeKey: string; uid: string | null; userName: string; onClose: () => void; onSent?: () => void
 }) {
   const [list, setList]       = useState<CommentDoc[]>([])
   const [text, setText]       = useState('')
@@ -96,6 +96,8 @@ function CommentsSheet({ episodeKey, uid, userName, onClose }: {
       setList(prev => [...prev, newComment])
       setText('')
       setTimeout(() => listRef.current?.scrollTo({ top: 99999, behavior: 'smooth' }), 80)
+      setDoc(doc(db, 'episodeStats', episodeKey), { comments: increment(1) }, { merge: true }).catch(() => {})
+      onSent?.()
     } catch { /* silent */ }
     finally { setSending(false) }
   }
@@ -150,11 +152,11 @@ function CommentsSheet({ episodeKey, uid, userName, onClose }: {
 }
 
 /* ── Right action rail button ── */
-function RailButton({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) {
+function RailButton({ icon, label, active, pulse, onClick }: { icon: React.ReactNode; label: string; active?: boolean; pulse?: boolean; onClick?: () => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer' }} onClick={onClick}>
       <button style={{ width: 46, height: 46, borderRadius: '50%', background: active ? 'var(--rs-primary)' : 'rgba(255,255,255,.15)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', transition: 'background .2s' }}>
-        {icon}
+        <span style={{ display: 'flex', animation: pulse ? 'rs-like-pop .4s ease' : undefined }}>{icon}</span>
       </button>
       <span style={{ fontSize: '.64rem', fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>{label}</span>
     </div>
@@ -188,6 +190,8 @@ function FeedContent() {
   const [coins, setCoins]               = useState(0)
   const [unlocked, setUnlocked]         = useState<Set<string>>(new Set())
   const [likedEps, setLikedEps]         = useState<Set<string>>(new Set())
+  const [stats, setStats]               = useState<Record<string, { likes: number; comments: number }>>({})
+  const [likePulseKey, setLikePulseKey] = useState<string | null>(null)
   const userNameRef                     = useRef('Anónimo')
 
   // comments
@@ -308,6 +312,19 @@ function FeedContent() {
   const isUnlocked = (ep: EpisodeWithId) => ep.free || unlocked.has(`${dramaId2}_${ep.id}`)
   const epKey = (ep: EpisodeWithId) => `${dramaId2}_${ep.id ?? ep.order}`
 
+  /* ── Load like/comment counts for the current episode ── */
+  useEffect(() => {
+    const ep = episodes[currentIdx]
+    if (!ep) return
+    const key = epKey(ep)
+    if (stats[key]) return
+    getDoc(doc(db, 'episodeStats', key)).then(snap => {
+      const d = snap.data()
+      setStats(prev => ({ ...prev, [key]: { likes: d?.likes ?? 0, comments: d?.comments ?? 0 } }))
+    }).catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIdx, dramaId2])
+
   /* ── Auto-play / pause based on sheet state ── */
   useEffect(() => {
     if (showNoPoints) {
@@ -366,11 +383,27 @@ function FeedContent() {
     const next = new Set(likedEps)
     isLiked ? next.delete(key) : next.add(key)
     setLikedEps(next)
+    setStats(prev => ({
+      ...prev,
+      [key]: { likes: Math.max(0, (prev[key]?.likes ?? 0) + (isLiked ? -1 : 1)), comments: prev[key]?.comments ?? 0 },
+    }))
+    if (!isLiked) {
+      setLikePulseKey(key)
+      setTimeout(() => setLikePulseKey(null), 400)
+    }
     try {
       await updateDoc(doc(db, 'users', uid), {
         likedEpisodes: isLiked ? arrayRemove(key) : arrayUnion(key),
       })
-    } catch { /* revert on error */ setLikedEps(likedEps) }
+      await setDoc(doc(db, 'episodeStats', key), { likes: increment(isLiked ? -1 : 1) }, { merge: true })
+    } catch {
+      /* revert on error */
+      setLikedEps(likedEps)
+      setStats(prev => ({
+        ...prev,
+        [key]: { likes: Math.max(0, (prev[key]?.likes ?? 0) + (isLiked ? 1 : -1)), comments: prev[key]?.comments ?? 0 },
+      }))
+    }
   }
 
   /* ── Save drama to list ── */
@@ -455,6 +488,7 @@ function FeedContent() {
           const isCurrent = idx === currentIdx
           const isLiked   = likedEps.has(epKey(ep))
           const isSaved   = isInList(drama!.id)
+          const epStats   = stats[epKey(ep)]
 
           return (
             <div key={ep.id ?? idx} style={{ height: '100dvh', scrollSnapAlign: 'start', scrollSnapStop: 'always', position: 'relative', overflow: 'hidden', background: '#000' }}>
@@ -539,13 +573,14 @@ function FeedContent() {
                 )}
                 <RailButton
                   icon={<Heart size={20} fill={isLiked ? '#fff' : 'none'} />}
-                  label="Gosto"
+                  label={epStats?.likes ? fmtViews(epStats.likes) : 'Gosto'}
                   active={isLiked}
+                  pulse={likePulseKey === epKey(ep)}
                   onClick={() => toggleLikeEp(ep)}
                 />
                 <RailButton
                   icon={<MessageCircle size={20} />}
-                  label="Comentar"
+                  label={epStats?.comments ? fmtViews(epStats.comments) : 'Comentar'}
                   onClick={() => setCommentsKey(epKey(ep))}
                 />
                 <RailButton
@@ -644,6 +679,13 @@ function FeedContent() {
           uid={uid}
           userName={userNameRef.current}
           onClose={() => setCommentsKey(null)}
+          onSent={() => {
+            const key = commentsKey
+            setStats(prev => ({
+              ...prev,
+              [key]: { likes: prev[key]?.likes ?? 0, comments: (prev[key]?.comments ?? 0) + 1 },
+            }))
+          }}
         />
       )}
 
@@ -658,6 +700,11 @@ function FeedContent() {
         @keyframes rs-bounce {
           0%, 100% { transform: translateX(-50%) translateY(0); }
           50%       { transform: translateX(-50%) translateY(-8px); }
+        }
+        @keyframes rs-like-pop {
+          0%   { transform: scale(1); }
+          40%  { transform: scale(1.35); }
+          100% { transform: scale(1); }
         }
         @keyframes rs-tap-fade {
           0%   { opacity: 1; transform: scale(1); }
