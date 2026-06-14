@@ -20,11 +20,13 @@ import type { Episode } from '@/types'
 const EPISODE_COST = 10
 type EpisodeWithId = Episode & { id: string }
 
-/** Adds Cloudinary quality transformation to a video URL */
+/** Adds Cloudinary quality/format transformation to a video URL */
 function hdUrl(url?: string): string {
   if (!url) return ''
-  // Insert q_auto:best/vc_auto after /upload/
-  return url.replace('/upload/', '/upload/q_auto:best,vc_auto/')
+  // q_auto picks a bitrate based on content/network instead of forcing top quality,
+  // f_auto serves a smaller codec (e.g. webm/h265) when the browser supports it —
+  // q_auto:best was producing very heavy files that stalled on mobile data.
+  return url.replace('/upload/', '/upload/q_auto,f_auto/')
 }
 
 function fmtViews(n: number): string {
@@ -449,12 +451,14 @@ function FeedContent() {
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', background: '#000', zIndex: 1 }}
                     />
                   )}
-                  {/* Preload next episode in background */}
+                  {/* Preload next episode's metadata only — preloading the full video
+                      competed for bandwidth with the one actually playing and caused
+                      buffering on mobile data. */}
                   {episodes[idx + 1]?.url && (
                     <video
                       key={`preload-${episodes[idx + 1].url}`}
                       src={hdUrl((episodes[idx + 1] as EpisodeWithId).url)}
-                      preload="auto"
+                      preload="metadata"
                       muted
                       style={{ display: 'none' }}
                     />
