@@ -9,6 +9,7 @@ import { DRAMAS, BADGE_STYLE } from '@/lib/mock'
 import { GENRE_LABELS } from '@/types'
 import type { Drama } from '@/types'
 import { useDramas } from '@/lib/useDramas'
+import { cld } from '@/lib/cloudinary'
 
 type Tab = 'emAlta' | 'novos' | 'maisVistos'
 
@@ -42,7 +43,7 @@ function DramaCard({ drama, onToast }: { drama: typeof DRAMAS[0]; onToast: (m: s
         fontSize: '2.8rem', position: 'relative', overflow: 'hidden',
       }}>
         {(drama as any).posterImage
-          ? <img src={(drama as any).posterImage} alt={drama.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top' }} loading="lazy"/>
+          ? <img src={cld((drama as any).posterImage, 400)} alt={drama.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top' }} loading="lazy"/>
           : <span dangerouslySetInnerHTML={{ __html: drama.icon }} />
         }
 
@@ -253,7 +254,7 @@ export default function ExplorarPage() {
             borderRadius: 20,
             height: 220,
             background: featured.posterGrad ?? 'var(--rs-grad-hero)',
-            backgroundImage: (featured as any).bannerImage ? `url(${(featured as any).bannerImage})` : undefined,
+            backgroundImage: (featured as any).bannerImage ? `url(${cld((featured as any).bannerImage, 1200)})` : undefined,
             backgroundSize: 'cover', backgroundPosition: 'center',
             position: 'relative',
             overflow: 'hidden',

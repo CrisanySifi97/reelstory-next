@@ -11,6 +11,7 @@ import type { Drama } from '@/types'
 import { useMyList } from '@/lib/useMyList'
 import { useDramas } from '@/lib/useDramas'
 import { auth, db } from '@/lib/firebase'
+import { cld } from '@/lib/cloudinary'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 
@@ -32,7 +33,7 @@ function DramaCard({ drama, size = 'normal', rank, progress, onClick, onToast, o
         zIndex: hovered ? 20 : 1, boxShadow: hovered ? '0 20px 50px rgba(0,0,0,.7)' : 'none' }}>
       <div style={{ aspectRatio, background: drama.posterGrad||'var(--rs-poster-romance)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'2.5rem', position:'relative', overflow:'hidden' }}>
         {(drama as any).posterImage
-          ? <img src={(drama as any).posterImage} alt={drama.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top' }} loading="lazy"/>
+          ? <img src={cld((drama as any).posterImage, 400)} alt={drama.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top' }} loading="lazy"/>
           : <span dangerouslySetInnerHTML={{ __html: drama.icon }}/>
         }
         {drama.badge && <div style={{ position:'absolute', top:6, left:6, fontSize:'.58rem', fontWeight:700, padding:'.18rem .45rem', borderRadius:4, textTransform:'uppercase', letterSpacing:'.5px', ...BADGE_STYLE[drama.badge] }}>{drama.badge}</div>}
@@ -143,7 +144,7 @@ export default function InicioPage() {
       <section style={{ height:'92vh',minHeight:560,position:'relative',display:'flex',alignItems:'flex-end',padding:'0 4% 5rem',overflow:'hidden', background:'linear-gradient(135deg,#1a0533 0%,#2d1b69 40%,#141414 100%)' }}>
         {/* Banner image — fades in per hero, key forces remount on change */}
         {heroBanner && (
-          <img key={heroBanner} src={heroBanner} alt="" style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:'center',animation:'heroBannerIn .6s ease forwards' }}/>
+          <img key={heroBanner} src={cld(heroBanner, 1600)} alt="" style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:'center',animation:'heroBannerIn .6s ease forwards' }}/>
         )}
         {/* Clickable background area → detalhe */}
         <div onClick={()=>hero && router.push(`/detalhe?id=${hero.id}`)} style={{ position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'flex-end',cursor: hero ? 'pointer' : 'default' }}>

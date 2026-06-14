@@ -27,13 +27,19 @@ function fromFirestore(id: string, data: Record<string, any>): Drama {
   } as Drama & { icon: string; short: string }
 }
 
+// Cache the active-dramas list for the session — avoids re-fetching from
+// Firestore on every page navigation (inicio, explorar, lista, detalhe all use it).
+let cachedDramas: (Drama & { icon: string })[] | null = null
+
 /* ── Load all active dramas ── */
 export function useDramas() {
-  const [dramas, setDramas]     = useState<(Drama & { icon:string })[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [isLive, setIsLive]     = useState(false)  // true = data came from Firestore
+  const [dramas, setDramas]     = useState<(Drama & { icon:string })[]>(cachedDramas ?? [])
+  const [loading, setLoading]   = useState(!cachedDramas)
+  const [isLive, setIsLive]     = useState(!!cachedDramas)  // true = data came from Firestore
 
   useEffect(() => {
+    if (cachedDramas) return
+
     getDocs(query(
       collection(db, 'dramas'),
       where('status', '==', 'Ativo'),
@@ -43,6 +49,7 @@ export function useDramas() {
           const list = snap.docs
             .map(d => fromFirestore(d.id, d.data()) as Drama & { icon:string })
             .sort((a, b) => a.title.localeCompare(b.title))
+          cachedDramas = list
           setDramas(list)
           setIsLive(true)
         }

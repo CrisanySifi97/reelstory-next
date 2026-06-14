@@ -10,6 +10,7 @@ import { doc, getDoc, updateDoc, arrayRemove } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import { BADGE_STYLE } from '@/lib/mock'
 import { useDramas } from '@/lib/useDramas'
+import { cld } from '@/lib/cloudinary'
 import type { Drama } from '@/types'
 
 type DramaWithIcon = Drama & { icon: string }
@@ -38,7 +39,7 @@ function ListCard({ drama, onRemove }: { drama: DramaWithIcon; onRemove: () => v
           fontSize: '2.8rem', position: 'relative', overflow: 'hidden',
         }}>
           {(drama as any).posterImage
-            ? <img src={(drama as any).posterImage} alt={drama.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top' }} loading="lazy"/>
+            ? <img src={cld((drama as any).posterImage, 400)} alt={drama.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top' }} loading="lazy"/>
             : <span dangerouslySetInnerHTML={{ __html: drama.icon }}/>
           }
           {drama.badge && (

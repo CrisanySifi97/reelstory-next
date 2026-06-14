@@ -21,6 +21,7 @@ import { useMyList } from '@/lib/useMyList'
 import { useDrama, useDramas } from '@/lib/useDramas'
 import { Coins } from 'lucide-react'
 import { auth, db } from '@/lib/firebase'
+import { cld } from '@/lib/cloudinary'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import type { Episode } from '@/types'
@@ -256,7 +257,7 @@ function DetalheContent() {
           {(drama as any).bannerImage ? (
             <>
               <img
-                src={(drama as any).bannerImage}
+                src={cld((drama as any).bannerImage, 1600)}
                 alt={drama.title}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }}
               />
@@ -702,7 +703,7 @@ function SimilarCard({ drama }: { drama: typeof DRAMAS[0] }) {
         {!(drama as any).posterImage && <span dangerouslySetInnerHTML={{ __html: drama.icon }} />}
       </div>
       {(drama as any).posterImage && (
-        <img src={(drama as any).posterImage} alt={drama.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top' }} loading="lazy"/>
+        <img src={cld((drama as any).posterImage, 400)} alt={drama.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top' }} loading="lazy"/>
       )}
 
       {/* Badge */}

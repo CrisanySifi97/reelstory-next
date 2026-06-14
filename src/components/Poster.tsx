@@ -1,5 +1,6 @@
 'use client'
 import type { Drama } from '@/types'
+import { cld } from '@/lib/cloudinary'
 
 const GRAIN = "data:image/svg+xml;utf8," + encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160">
@@ -58,7 +59,8 @@ export default function Poster({ drama, size = 'card', showInfo = true, style = 
     layout.at === 'top-right' ? { top:'10%', right:'8%', left:'30%' } :
                                  { top:'50%', left:'10%', right:'10%', transform:'translateY(-50%)' }
 
-  const img = (drama as any).posterImage as string | undefined
+  const imgWidth = size === 'hero' || size === 'feed' ? 800 : 400
+  const img = cld((drama as any).posterImage as string | undefined, imgWidth)
 
   return (
     <div style={{ position:'relative', width:'100%', height:'100%', background: drama.posterGrad||'var(--rs-poster-romance)', overflow:'hidden', containerType:'inline-size', ...style }}>
