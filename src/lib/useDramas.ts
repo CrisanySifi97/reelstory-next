@@ -16,7 +16,10 @@ function fromFirestore(id: string, data: Record<string, any>): Drama {
     status:      data.status      ?? 'Ativo',
     rating:      data.rating      ?? 0,
     views:       data.views       ?? 0,
-    episodes:    data.episodes    ?? [],
+    // Sort by "order" — the array's storage order doesn't always match it (e.g. an
+    // episode added later in the admin can have a lower "order" than earlier ones),
+    // but both the episode grid and the feed player index into this array directly.
+    episodes:    [...(data.episodes ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
     posterGrad:  data.posterGrad  ?? 'var(--rs-poster-romance)',
     posterImage:  data.posterImage  ?? undefined,
     bannerImage:  data.bannerImage  ?? undefined,
