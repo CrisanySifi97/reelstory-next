@@ -3,8 +3,6 @@
    Vertical microdramas · Angola · Portuguese-language streaming
 */
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@400;500;700&display=swap');
-
 :root {
   /* BRAND COLORS */
   --rs-primary:        #FF385C;
@@ -72,8 +70,8 @@
   --rs-poster-action-2:    linear-gradient(135deg,#0a3d62,#1e3799);
 
   /* TYPOGRAPHY */
-  --rs-font-display: 'Playfair Display', Georgia, serif;
-  --rs-font-body:    'DM Sans', system-ui, -apple-system, sans-serif;
+  --rs-font-display: var(--font-playfair), Georgia, serif;
+  --rs-font-body:    var(--font-dm-sans), system-ui, -apple-system, sans-serif;
 
   /* Display scale — Playfair 900 */
   --rs-display-xl:  clamp(2.4rem, 5vw, 4.2rem);

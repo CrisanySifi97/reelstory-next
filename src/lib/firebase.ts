@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app'
 import { getAuth, browserLocalPersistence, setPersistence } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, initializeFirestore, persistentLocalCache } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
@@ -15,7 +15,13 @@ const firebaseConfig = {
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig)
 
 export const auth = getAuth(app)
-export const db   = getFirestore(app)
+
+// On the browser: use IndexedDB persistence so repeat visits load data instantly
+// from local cache (no network round-trip) and sync in the background.
+// On the server (SSR/pre-render): fall back to the default in-memory Firestore.
+export const db = typeof window !== 'undefined'
+  ? initializeFirestore(app, { localCache: persistentLocalCache() })
+  : getFirestore(app)
 
 // Ensure session persists across browser restarts (not just the tab)
 if (typeof window !== 'undefined') {

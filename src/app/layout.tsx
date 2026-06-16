@@ -1,6 +1,21 @@
 import type { Metadata, Viewport } from 'next'
+import { Playfair_Display, DM_Sans } from 'next/font/google'
 import '@/styles/globals.css'
 import PWARegister from '@/components/PWARegister'
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  weight: ['700', '900'],
+  variable: '--font-playfair',
+  display: 'swap',
+})
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+})
 
 const APP_URL = 'https://reelstory-next.vercel.app'
 
@@ -63,14 +78,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt" translate="no" suppressHydrationWarning>
-      <head>
-        {/* Fonts — preconnect first for faster load */}
-        <link rel="preconnect" href="https://fonts.googleapis.com"/>
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous"/>
-        <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700&display=swap"/>
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
-      </head>
+    <html lang="pt" translate="no" suppressHydrationWarning className={`${playfair.variable} ${dmSans.variable}`}>
+      <head/>
       <body suppressHydrationWarning>
         {children}
         <PWARegister/>

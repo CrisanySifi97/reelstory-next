@@ -144,7 +144,7 @@ export default function InicioPage() {
       <section style={{ height:'92vh',minHeight:560,position:'relative',display:'flex',alignItems:'flex-end',padding:'0 4% 5rem',overflow:'hidden', background:'linear-gradient(135deg,#1a0533 0%,#2d1b69 40%,#141414 100%)' }}>
         {/* Banner image — fades in per hero, key forces remount on change */}
         {heroBanner && (
-          <img key={heroBanner} src={cld(heroBanner, 1600)} alt="" style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:'center',animation:'heroBannerIn .6s ease forwards' }}/>
+          <img key={heroBanner} src={cld(heroBanner, 1600)} alt="" fetchPriority="high" style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:'center',animation:'heroBannerIn .6s ease forwards' }}/>
         )}
         {/* Clickable background area → detalhe */}
         <div onClick={()=>hero && router.push(`/detalhe?id=${hero.id}`)} style={{ position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'flex-end',cursor: hero ? 'pointer' : 'default' }}>
