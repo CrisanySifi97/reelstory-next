@@ -44,15 +44,22 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
 
+    // Log full payload so we can inspect it in Vercel function logs
+    console.log('[kursinha-webhook] event:', body.event)
+    console.log('[kursinha-webhook] payload:', JSON.stringify(body, null, 2))
+
     // Accept payment.success or checkout.completed events
     if (body.event !== 'payment.success' && body.event !== 'checkout.completed') {
+      console.log('[kursinha-webhook] ignoring event:', body.event)
       return NextResponse.json({ ok: true, msg: 'event ignored' })
     }
 
     const data        = body.data ?? body
-    const userId      = (data.metadata?.userId ?? data.userId ?? '').trim()
+    const userId      = (data.metadata?.userId ?? data.userId ?? data.customer?.id ?? data.buyer?.id ?? '').trim()
     const orderId     = (data.orderId ?? data.order_id ?? data.id ?? '').trim()
-    const checkoutId  = (data.checkoutId ?? data.checkout_id ?? '').replace(/^.*\//, '').trim()
+    const checkoutId  = (data.checkoutId ?? data.checkout_id ?? data.checkout?.id ?? '').replace(/^.*\//, '').trim()
+
+    console.log('[kursinha-webhook] parsed — userId:', userId, '| orderId:', orderId, '| checkoutId:', checkoutId)
 
     if (!userId)     return NextResponse.json({ error: 'no userId'  }, { status: 400 })
     if (!checkoutId) return NextResponse.json({ error: 'no checkoutId' }, { status: 400 })
