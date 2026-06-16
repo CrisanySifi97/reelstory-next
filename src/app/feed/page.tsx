@@ -194,33 +194,48 @@ function FeedContent() {
   // the moment observe() is called, before the user has scrolled. On mobile
   // those initial entries carry wrong intersection ratios (scroll-snap is still
   // settling, layout in flux) and randomly overwrite currentIdx.
-  // Simple scroll math is exact once scroll-snap has settled, never fires on
-  // mount, and has no initial-callback race condition.
+  // Simple scroll math is exact once scroll-snap has settled and never fires on
+  // mount. The `touchstart`/`wheel` guard below additionally ignores any
+  // spurious scroll events iOS Safari fires when new children are inserted into
+  // a scroll-snap container — those events arrive with arbitrary scrollTop
+  // values and would corrupt currentIdx before the user touches anything.
   useEffect(() => {
     const container = scrollRef.current
-    if (!container) return
-    const targets = Array.from(container.children) as HTMLElement[]
-    if (targets.length === 0) return
-    if (startEp > 0) {
-      container.scrollTop = startEp * container.clientHeight
-    }
+    if (!container || episodes.length === 0) return
+
+    // Always restore the target episode's position. Without the unconditional
+    // reset (even for ep=0) the browser may preserve a previous scroll position
+    // from session history, silently landing on the wrong episode.
+    container.scrollTop = startEp * container.clientHeight
+    setCurrentIdx(startEp)
+
+    let userInteracted = false
+    const onInteract = () => { userInteracted = true }
+
     let rafId: number
     const onScroll = () => {
+      if (!userInteracted) return
       cancelAnimationFrame(rafId)
       rafId = requestAnimationFrame(() => {
         const h = container.clientHeight
         if (!h) return
         const idx = Math.round(container.scrollTop / h)
-        if (idx >= 0 && idx < targets.length) {
+        if (idx >= 0 && idx < episodes.length) {
           setCurrentIdx(prev => prev === idx ? prev : idx)
         }
       })
     }
+
+    container.addEventListener('touchstart', onInteract, { passive: true })
+    container.addEventListener('wheel', onInteract, { passive: true })
     container.addEventListener('scroll', onScroll, { passive: true })
     return () => {
+      container.removeEventListener('touchstart', onInteract)
+      container.removeEventListener('wheel', onInteract)
       container.removeEventListener('scroll', onScroll)
       cancelAnimationFrame(rafId)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [episodes.length])
 
   const dramaId2 = drama?.id ?? ''
