@@ -39,7 +39,8 @@ export default function LoginPage() {
   const [otp, setOtp]                 = useState('')
   const [otpSent, setOtpSent]         = useState(false)
   const [confirmResult, setConfirm]   = useState<ConfirmationResult | null>(null)
-  const recaptchaRef = useRef<RecaptchaVerifier | null>(null)
+  const recaptchaRef    = useRef<RecaptchaVerifier | null>(null)
+  const recaptchaReady  = useRef(false)
 
   // shared
   const [loading, setLoading]         = useState(false)
@@ -169,6 +170,23 @@ export default function LoginPage() {
     }
   }
 
+  // Pre-render the invisible reCAPTCHA as soon as the phone tab is selected.
+  // Creating it inside handleSendOtp (on button click) is too late on some
+  // browsers — the verifier needs a frame to attach to the DOM before use.
+  useEffect(() => {
+    if (method !== 'phone') {
+      recaptchaRef.current?.clear()
+      recaptchaRef.current = null
+      recaptchaReady.current = false
+      return
+    }
+    if (recaptchaReady.current) return
+    try {
+      recaptchaRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' })
+      recaptchaRef.current.render().then(() => { recaptchaReady.current = true }).catch(() => {})
+    } catch { /* silent — will retry in handleSendOtp */ }
+  }, [method])
+
   /* ── Phone: send OTP ── */
   const handleSendOtp = async () => {
     setError('')
@@ -177,20 +195,25 @@ export default function LoginPage() {
     const phoneNumber = `+244${digits.slice(-9)}`
     setLoading(true)
     try {
+      // Use pre-rendered verifier; create a fresh one as fallback
       if (!recaptchaRef.current) {
         recaptchaRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' })
+        await recaptchaRef.current.render()
       }
       const result = await signInWithPhoneNumber(auth, phoneNumber, recaptchaRef.current)
       setConfirm(result)
       setOtpSent(true)
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''
+      const msg  = (err as { message?: string }).message ?? String(err)
       if (code === 'auth/invalid-phone-number') setError('Número de telefone inválido')
       else if (code === 'auth/too-many-requests') setError('Muitas tentativas. Aguarda uns minutos.')
-      else if (code === 'auth/operation-not-allowed') setError('Login por telefone não activo — activa em Firebase Console > Authentication > Sign-in method')
-      else setError(`Erro: ${code || 'desconhecido'}`)
+      else if (code === 'auth/operation-not-allowed') setError('Login por telefone não activo — activa em Firebase Console > Authentication > Sign-in method > Phone')
+      else if (code === 'auth/unauthorized-domain') setError('Domínio não autorizado — adiciona reelstory-next.vercel.app em Firebase Console > Authentication > Authorized domains')
+      else setError(`Erro: ${code || msg}`)
       recaptchaRef.current?.clear()
       recaptchaRef.current = null
+      recaptchaReady.current = false
     } finally { setLoading(false) }
   }
 
@@ -209,7 +232,7 @@ export default function LoginPage() {
       const code = (err as { code?: string }).code ?? ''
       if (code === 'auth/invalid-verification-code') setError('Código inválido. Verifica o SMS.')
       else if (code === 'auth/code-expired') setError('Código expirado. Clica em "Reenviar".')
-      else setError(`Erro: ${code || 'desconhecido'}`)
+      else setError(`Erro: ${code || (err as { message?: string }).message || 'desconhecido'}`)
     } finally { setLoading(false) }
   }
 
