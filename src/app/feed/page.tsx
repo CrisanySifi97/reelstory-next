@@ -190,10 +190,6 @@ function FeedContent() {
   }, [currentIdx, unlocked])
 
   /* ── Scroll to startEp + visible-episode observer ── */
-  // Uses IntersectionObserver instead of scroll+rAF math, which can miss
-  // updates on momentum/snap scrolling in some mobile browsers. Scrolling to
-  // startEp is done here too, once episodes are actually rendered — doing it
-  // in an earlier effect (before episodes load) gets clamped back to 0.
   useEffect(() => {
     const container = scrollRef.current
     if (!container) return
@@ -202,17 +198,23 @@ function FeedContent() {
     if (startEp > 0) {
       container.scrollTop = startEp * container.clientHeight
     }
-    // Wait a frame so layout (and the scrollTop set above) has settled before
-    // observing — observing immediately can make the observer's first report
-    // for each target carry stale/incorrect intersection ratios.
+
+    // IntersectionObserver fires an initial callback for every observed target
+    // immediately after observe() is called — before the user has scrolled at
+    // all. On mobile, those initial entries often carry incorrect ratios (the
+    // scroll-snap hasn't settled yet, layout is still in flux) and the code
+    // was wrongly overwriting currentIdx with a random episode index.
+    // Fix: only process observer entries AFTER the user has done the first
+    // actual scroll. Before that, currentIdx is already correct (set via
+    // useState(startEp)) and must not be touched.
+    let hasScrolled = false
+    const onScroll = () => { hasScrolled = true }
+    container.addEventListener('scroll', onScroll, { passive: true })
+
     let observer: IntersectionObserver | null = null
     const raf = requestAnimationFrame(() => {
       observer = new IntersectionObserver((entries) => {
-        // A single callback can report several entries at once (e.g. right after
-        // observe() is called, or during fast scroll-snap settling). Picking the
-        // most-visible one — instead of acting on every qualifying entry in
-        // iteration order — avoids ending up on the wrong episode when a
-        // lower-visibility entry happens to be processed last.
+        if (!hasScrolled) return
         let bestIdx = -1
         let bestRatio = 0
         for (const entry of entries) {
@@ -231,6 +233,7 @@ function FeedContent() {
     return () => {
       cancelAnimationFrame(raf)
       observer?.disconnect()
+      container.removeEventListener('scroll', onScroll)
     }
   }, [episodes.length])
 
@@ -419,14 +422,6 @@ function FeedContent() {
             <Coins size={12} /> {coins.toLocaleString('pt-AO')}
           </Link>
         )}
-      </div>
-
-      {/* TEMP DEBUG — remove after diagnosing random-episode report */}
-      <div style={{ position: 'absolute', top: 4, left: 4, zIndex: 999, background: 'rgba(0,0,0,.8)', color: '#0f0', fontSize: 10, padding: '4px 6px', borderRadius: 4, maxWidth: '90vw', wordBreak: 'break-all', fontFamily: 'monospace', pointerEvents: 'none' }}>
-        query={params.toString()}<br/>
-        drama={drama?.title}<br/>
-        startEp={startEp} currentIdx={currentIdx} eps={episodes.length}<br/>
-        currentEp.url={currentEp?.url}
       </div>
 
       {/* ── Scrollable episodes ── */}
