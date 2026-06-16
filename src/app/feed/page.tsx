@@ -88,7 +88,7 @@ function FeedContent() {
   const [currentIdx, setCurrentIdx]     = useState(startEp)
   const [videoReady, setVideoReady]     = useState(false)
   const [playing, setPlaying]           = useState(true)
-  const [muted, setMuted]               = useState(true)
+  const [muted, setMuted]               = useState(false)
   const [tapIcon, setTapIcon]           = useState<'play'|'pause'|null>(null)
   const [progress, setProgress]         = useState(0)
   const [currentTime, setCurrentTime]   = useState('0:00')
@@ -137,8 +137,14 @@ function FeedContent() {
   const tryPlay = () => {
     const v = videoRef.current
     if (!v) return
-    v.muted = true
-    v.play().catch(() => {})
+    v.muted = false
+    setMuted(false)
+    v.play().catch(() => {
+      // Browser blocked unmuted autoplay (no prior user gesture) — fall back muted
+      v.muted = true
+      setMuted(true)
+      v.play().catch(() => {})
+    })
   }
 
   const handleTap = () => {
@@ -174,7 +180,7 @@ function FeedContent() {
     setCurrentTime('0:00')
     setTotalTime('0:00')
     setPlaying(true)
-    setMuted(true)
+    setMuted(false)
     const ep = episodes[currentIdx]
     const hasVideo = ep && !!(ep.url || ep.ytId)
     if (!hasVideo) {
