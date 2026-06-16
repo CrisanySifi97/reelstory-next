@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore, FieldValue, Transaction } from 'firebase-admin/firestore'
+import { getAuth } from 'firebase-admin/auth'
 
 function getAdminDb() {
   if (!getApps().length) {
@@ -54,12 +55,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, msg: 'event ignored' })
     }
 
-    const data        = body.data ?? body
-    const userId      = (data.metadata?.userId ?? data.userId ?? data.customer?.id ?? data.buyer?.id ?? '').trim()
-    const orderId     = (data.orderId ?? data.order_id ?? data.id ?? '').trim()
-    const checkoutId  = (data.checkoutId ?? data.checkout_id ?? data.checkout?.id ?? '').replace(/^.*\//, '').trim()
+    const data       = body.data ?? body
+    let userId       = (data.metadata?.userId ?? data.userId ?? '').trim()
+    const orderId    = (data.orderId ?? data.order_id ?? data.id ?? '').trim()
+    const checkoutId = (data.checkoutId ?? data.checkout_id ?? data.checkout?.id ?? '').replace(/^.*\//, '').trim()
+    const email      = (data.email ?? data.customer?.email ?? data.buyer?.email ?? '').trim().toLowerCase()
 
-    console.log('[kursinha-webhook] parsed — userId:', userId, '| orderId:', orderId, '| checkoutId:', checkoutId)
+    // If no userId from metadata, resolve via the buyer's email (Option B)
+    if (!userId && email) {
+      try {
+        const userRecord = await getAuth().getUserByEmail(email)
+        userId = userRecord.uid
+        console.log('[kursinha-webhook] resolved userId from email:', email, '→', userId)
+      } catch {
+        console.log('[kursinha-webhook] no Firebase user found for email:', email)
+      }
+    }
+
+    console.log('[kursinha-webhook] parsed — userId:', userId, '| email:', email, '| orderId:', orderId, '| checkoutId:', checkoutId)
 
     if (!userId)     return NextResponse.json({ error: 'no userId'  }, { status: 400 })
     if (!checkoutId) return NextResponse.json({ error: 'no checkoutId' }, { status: 400 })
