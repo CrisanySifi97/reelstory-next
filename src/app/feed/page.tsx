@@ -189,7 +189,13 @@ function FeedContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx, unlocked])
 
-  /* ── Scroll to startEp + visible-episode observer ── */
+  /* ── Scroll to startEp + track visible episode via scroll position ── */
+  // Replaced IntersectionObserver: IO fires initial callbacks for ALL targets
+  // the moment observe() is called, before the user has scrolled. On mobile
+  // those initial entries carry wrong intersection ratios (scroll-snap is still
+  // settling, layout in flux) and randomly overwrite currentIdx.
+  // Simple scroll math is exact once scroll-snap has settled, never fires on
+  // mount, and has no initial-callback race condition.
   useEffect(() => {
     const container = scrollRef.current
     if (!container) return
@@ -198,42 +204,22 @@ function FeedContent() {
     if (startEp > 0) {
       container.scrollTop = startEp * container.clientHeight
     }
-
-    // IntersectionObserver fires an initial callback for every observed target
-    // immediately after observe() is called — before the user has scrolled at
-    // all. On mobile, those initial entries often carry incorrect ratios (the
-    // scroll-snap hasn't settled yet, layout is still in flux) and the code
-    // was wrongly overwriting currentIdx with a random episode index.
-    // Fix: only process observer entries AFTER the user has done the first
-    // actual scroll. Before that, currentIdx is already correct (set via
-    // useState(startEp)) and must not be touched.
-    let hasScrolled = false
-    const onScroll = () => { hasScrolled = true }
+    let rafId: number
+    const onScroll = () => {
+      cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(() => {
+        const h = container.clientHeight
+        if (!h) return
+        const idx = Math.round(container.scrollTop / h)
+        if (idx >= 0 && idx < targets.length) {
+          setCurrentIdx(prev => prev === idx ? prev : idx)
+        }
+      })
+    }
     container.addEventListener('scroll', onScroll, { passive: true })
-
-    let observer: IntersectionObserver | null = null
-    const raf = requestAnimationFrame(() => {
-      observer = new IntersectionObserver((entries) => {
-        if (!hasScrolled) return
-        let bestIdx = -1
-        let bestRatio = 0
-        for (const entry of entries) {
-          if (!entry.isIntersecting || entry.intersectionRatio < bestRatio) continue
-          const idx = targets.indexOf(entry.target as HTMLElement)
-          if (idx === -1) continue
-          bestRatio = entry.intersectionRatio
-          bestIdx = idx
-        }
-        if (bestIdx !== -1 && bestRatio >= 0.5) {
-          setCurrentIdx(prev => (prev === bestIdx ? prev : bestIdx))
-        }
-      }, { root: container, threshold: 0.5 })
-      targets.forEach(el => observer!.observe(el))
-    })
     return () => {
-      cancelAnimationFrame(raf)
-      observer?.disconnect()
       container.removeEventListener('scroll', onScroll)
+      cancelAnimationFrame(rafId)
     }
   }, [episodes.length])
 
@@ -474,7 +460,16 @@ function FeedContent() {
                         const v = videoRef.current
                         if (v) setTotalTime(fmtTime(v.duration))
                       }}
-                      onCanPlay={() => setVideoReady(true)}
+                      onCanPlay={() => {
+                        setVideoReady(true)
+                        // Autoplay effect runs on mount when videoRef is null
+                        // (drama still loading), so we retry here when the
+                        // video is actually ready to play.
+                        if (!autoPlayedRef.current && currentIdx === startEp && !showNoPoints) {
+                          tryPlay()
+                          autoPlayedRef.current = true
+                        }
+                      }}
                     />
                   ) : (
                     <iframe
