@@ -11,9 +11,14 @@ service cloud.firestore {
     }
 
     // ── Dramas — public read, admin write ──────────────────────
+    // Authenticated users may update only the aggregate rating fields
+    // (written by useRating after a user submits a star rating).
     match /dramas/{dramaId} {
       allow read: if true;
       allow write: if isAdmin();
+      allow update: if isAuth()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['rating', 'ratingCount']);
     }
 
     // ── Episodes (sub-collection) — public read, admin write ──
@@ -64,9 +69,16 @@ service cloud.firestore {
     }
 
     // ── Ratings — authenticated read; owner write ──────────────
+    // ratingId format: {dramaId}_{userId}
+    // Validates: value is 1–5, userId matches the caller, no extra fields injected.
     match /ratings/{ratingId} {
       allow read: if true;
-      allow write: if isAuth();
+      allow write: if isAuth()
+                   && request.resource.data.userId == request.auth.uid
+                   && request.resource.data.rating is number
+                   && request.resource.data.rating >= 1
+                   && request.resource.data.rating <= 5;
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
     }
 
     // ── Campaigns — public read, admin write ──────────────────

@@ -9,7 +9,7 @@ import {
   Send, Package, ToggleLeft, ToggleRight, PieChart, Activity,
 } from 'lucide-react'
 import ImageUpload from '@/components/ImageUpload'
-import { auth, db, ADMIN_EMAIL } from '@/lib/firebase'
+import { auth, db } from '@/lib/firebase'
 import {
   collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc,
   doc, setDoc, deleteField, orderBy, query, serverTimestamp, where, writeBatch,
@@ -137,24 +137,24 @@ export default function AdminPage() {
     const unsub = onAuthStateChanged(auth, async user => {
       if (!user) { window.location.href = '/login?next=/admin'; return }
 
-      // Check 1 — email match (case-insensitive)
-      const adminEmail = ADMIN_EMAIL.trim().toLowerCase()
-      const userEmail  = (user.email ?? '').toLowerCase()
-      const emailMatch = adminEmail ? userEmail === adminEmail : false
-
-      // Check 2 — Firestore isAdmin flag (direct doc read, more reliable)
-      let firestoreAdmin = false
       try {
+        // Primary check — Firestore isAdmin flag
         const snap = await getDoc(doc(db, 'users', user.uid))
-        firestoreAdmin = snap.exists() && snap.data().isAdmin === true
-        // Auto-set isAdmin if email matches but flag is missing
-        if (emailMatch && !firestoreAdmin) {
-          updateDoc(doc(db, 'users', user.uid), { isAdmin: true }).catch(() => {})
-          firestoreAdmin = true
-        }
-      } catch { /* Firestore unreachable — fall back to email check */ }
+        let isAdminUser = snap.exists() && snap.data()?.isAdmin === true
 
-      if (!emailMatch && !firestoreAdmin) { window.location.href = '/'; return }
+        if (!isAdminUser) {
+          // Bootstrap: server verifies email against ADMIN_EMAIL env var (never exposed to client)
+          // and sets isAdmin via Admin SDK if it matches.
+          const token = await user.getIdToken()
+          const res = await fetch('/api/init-admin', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          isAdminUser = res.ok
+        }
+
+        if (!isAdminUser) { window.location.href = '/'; return }
+      } catch { window.location.href = '/'; return }
 
       setAuthed(true)
       setUserInitial((user.displayName || user.email || 'A')[0].toUpperCase())

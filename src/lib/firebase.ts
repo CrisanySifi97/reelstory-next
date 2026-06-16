@@ -16,7 +16,6 @@ const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig)
 
 export const auth = getAuth(app)
 export const db   = getFirestore(app)
-export const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? ''
 
 // Ensure session persists across browser restarts (not just the tab)
 if (typeof window !== 'undefined') {
