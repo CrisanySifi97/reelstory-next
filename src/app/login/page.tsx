@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Eye, EyeOff, Mail, Lock, Phone, ArrowRight } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 import { auth, db } from '@/lib/firebase'
 import {
   signInWithEmailAndPassword,
@@ -11,15 +11,11 @@ import {
   getRedirectResult,
   onAuthStateChanged,
   updateProfile,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  type ConfirmationResult,
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { DRAMAS } from '@/lib/mock'
 
-type Mode   = 'login' | 'register'
-type Method = 'email' | 'phone'
+type Mode = 'login' | 'register'
 
 const COL1_DEFAULT = [...DRAMAS.slice(0, 4), ...DRAMAS.slice(0, 4)]
 const COL2_DEFAULT = [...DRAMAS.slice(4, 8), ...DRAMAS.slice(4, 8)]
@@ -32,15 +28,6 @@ export default function LoginPage() {
   const [email, setEmail]         = useState('')
   const [pass, setPass]           = useState('')
   const [showPass, setShowPass]   = useState(false)
-
-  // phone state
-  const [method, setMethod]           = useState<Method>('email')
-  const [phone, setPhone]             = useState('')
-  const [otp, setOtp]                 = useState('')
-  const [otpSent, setOtpSent]         = useState(false)
-  const [confirmResult, setConfirm]   = useState<ConfirmationResult | null>(null)
-  const recaptchaRef    = useRef<RecaptchaVerifier | null>(null)
-  const recaptchaReady  = useRef(false)
 
   // shared
   const [loading, setLoading]         = useState(false)
@@ -170,73 +157,6 @@ export default function LoginPage() {
     }
   }
 
-  // Pre-render the invisible reCAPTCHA as soon as the phone tab is selected.
-  // Creating it inside handleSendOtp (on button click) is too late on some
-  // browsers — the verifier needs a frame to attach to the DOM before use.
-  useEffect(() => {
-    if (method !== 'phone') {
-      recaptchaRef.current?.clear()
-      recaptchaRef.current = null
-      recaptchaReady.current = false
-      return
-    }
-    if (recaptchaReady.current) return
-    try {
-      recaptchaRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' })
-      recaptchaRef.current.render().then(() => { recaptchaReady.current = true }).catch(() => {})
-    } catch { /* silent — will retry in handleSendOtp */ }
-  }, [method])
-
-  /* ── Phone: send OTP ── */
-  const handleSendOtp = async () => {
-    setError('')
-    const digits = phone.replace(/\D/g, '')
-    if (digits.length < 9) { setError('Introduz 9 dígitos (ex: 923 456 789)'); return }
-    const phoneNumber = `+244${digits.slice(-9)}`
-    setLoading(true)
-    try {
-      // Use pre-rendered verifier; create a fresh one as fallback
-      if (!recaptchaRef.current) {
-        recaptchaRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' })
-        await recaptchaRef.current.render()
-      }
-      const result = await signInWithPhoneNumber(auth, phoneNumber, recaptchaRef.current)
-      setConfirm(result)
-      setOtpSent(true)
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code ?? ''
-      const msg  = (err as { message?: string }).message ?? String(err)
-      if (code === 'auth/invalid-phone-number') setError('Número de telefone inválido')
-      else if (code === 'auth/too-many-requests') setError('Muitas tentativas. Aguarda uns minutos.')
-      else if (code === 'auth/operation-not-allowed') setError('Login por telefone não activo — activa em Firebase Console > Authentication > Sign-in method > Phone')
-      else if (code === 'auth/unauthorized-domain') setError('Domínio não autorizado — adiciona reelstory-next.vercel.app em Firebase Console > Authentication > Authorized domains')
-      else setError(`Erro: ${code || msg}`)
-      recaptchaRef.current?.clear()
-      recaptchaRef.current = null
-      recaptchaReady.current = false
-    } finally { setLoading(false) }
-  }
-
-  /* ── Phone: verify OTP ── */
-  const handleVerifyOtp = async () => {
-    if (!confirmResult || otp.length < 6) { setError('Introduz o código de 6 dígitos'); return }
-    setError('')
-    setLoading(true)
-    try {
-      const cred = await confirmResult.confirm(otp)
-      const user = cred.user
-      const displayName = user.displayName || user.phoneNumber || `+244${phone.replace(/\D/g,'').slice(-9)}`
-      createUserDoc(user.uid, user.phoneNumber ?? '', displayName, refCode || undefined).catch(() => {})
-      window.location.href = nextUrl
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code ?? ''
-      if (code === 'auth/invalid-verification-code') setError('Código inválido. Verifica o SMS.')
-      else if (code === 'auth/code-expired') setError('Código expirado. Clica em "Reenviar".')
-      else setError(`Erro: ${code || (err as { message?: string }).message || 'desconhecido'}`)
-    } finally { setLoading(false) }
-  }
-
-  const switchMethod = (m: Method) => { setMethod(m); setError(''); setOtpSent(false); setOtp(''); setPhone('') }
 
   return (
     <div style={{ minHeight:'100dvh', display:'flex', background:'#1A1A2E', color:'#fff', fontFamily:'var(--rs-font-body)' }}>
@@ -313,20 +233,8 @@ export default function LoginPage() {
             {mode === 'login' ? (isAdminLogin ? 'Entra com a conta de administrador' : 'Entra na tua conta ReelStory') : 'Junta-te à ReelStory hoje'}
           </p>
 
-          {/* Method tabs — not shown for admin */}
-          {!isAdminLogin && (
-            <div style={{ display:'flex', background:'rgba(255,255,255,.05)', borderRadius:12, padding:4, marginBottom:'1.4rem', gap:4 }}>
-              <button onClick={() => switchMethod('email')} style={{ flex:1, padding:'.55rem', borderRadius:8, border:'none', background: method==='email' ? 'rgba(255,255,255,.12)' : 'transparent', color: method==='email' ? '#fff' : '#8892A4', fontWeight:700, cursor:'pointer', fontSize:'.86rem', fontFamily:'var(--rs-font-body)', display:'flex', alignItems:'center', justifyContent:'center', gap:'.4rem', transition:'all .2s' }}>
-                <Mail size={14}/> Email
-              </button>
-              <button onClick={() => switchMethod('phone')} style={{ flex:1, padding:'.55rem', borderRadius:8, border:'none', background: method==='phone' ? 'rgba(255,255,255,.12)' : 'transparent', color: method==='phone' ? '#fff' : '#8892A4', fontWeight:700, cursor:'pointer', fontSize:'.86rem', fontFamily:'var(--rs-font-body)', display:'flex', alignItems:'center', justifyContent:'center', gap:'.4rem', transition:'all .2s' }}>
-                <Phone size={14}/> Telefone
-              </button>
-            </div>
-          )}
-
           {/* ── EMAIL METHOD ── */}
-          {(method === 'email' || isAdminLogin) && (
+          {true && (
             <>
               <button onClick={handleGoogle} disabled={loading} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'.6rem', padding:'.78rem', background:'#fff', color:'#111', border:'none', borderRadius:12, fontSize:'var(--rs-body-md)', fontFamily:'var(--rs-font-body)', fontWeight:700, cursor:loading?'default':'pointer', marginBottom:'1.2rem', opacity:loading?.6:1, transition:'opacity .2s' }}>
                 <svg width="18" height="18" viewBox="0 0 48 48">
@@ -376,70 +284,8 @@ export default function LoginPage() {
             </>
           )}
 
-          {/* ── PHONE METHOD — step 1: number ── */}
-          {method === 'phone' && !otpSent && (
-            <div style={{ display:'flex', flexDirection:'column', gap:'.85rem' }}>
-              {mode === 'register' && (
-                <div>
-                  <label style={labelStyle}>Nome completo</label>
-                  <input value={name} onChange={e=>setName(e.target.value)} placeholder="O teu nome" style={inputStyle}/>
-                </div>
-              )}
-              <div>
-                <label style={labelStyle}>Número de telefone</label>
-                <div style={{ display:'flex', gap:8 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'.4rem', background:'#0f1729', border:'1.5px solid rgba(255,255,255,.1)', borderRadius:12, padding:'.78rem .9rem', flexShrink:0, color:'rgba(255,255,255,.7)', fontSize:'.95rem', fontWeight:700 }}>
-                    🇦🇴 +244
-                  </div>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={e => setPhone(e.target.value.replace(/\D/g,'').slice(0,9))}
-                    placeholder="923 456 789"
-                    style={{ ...inputStyle, flex:1, letterSpacing:'.04em' }}
-                  />
-                </div>
-                <div style={{ fontSize:'.72rem', color:'#8892A4', marginTop:'.4rem' }}>Unitel · Africell · Movicel</div>
-              </div>
-              {error && <div style={{ background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'.65rem .9rem', fontSize:'var(--rs-body-sm)', color:'#ef4444' }}>{error}</div>}
-              <button onClick={handleSendOtp} disabled={loading || phone.replace(/\D/g,'').length < 9} style={{ background:'var(--rs-grad-hero)', color:'#fff', border:'none', borderRadius:12, padding:'.82rem', fontSize:'var(--rs-body-md)', fontFamily:'var(--rs-font-body)', fontWeight:700, cursor:(loading||phone.replace(/\D/g,'').length<9)?'default':'pointer', boxShadow:'var(--rs-shadow-btn)', opacity:(loading||phone.replace(/\D/g,'').length<9)?.5:1, transition:'opacity .2s', width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'.5rem' }}>
-                {loading ? 'A enviar...' : <><ArrowRight size={16}/> Enviar código SMS</>}
-              </button>
-            </div>
-          )}
-
-          {/* ── PHONE METHOD — step 2: OTP ── */}
-          {method === 'phone' && otpSent && (
-            <div style={{ display:'flex', flexDirection:'column', gap:'.85rem' }}>
-              <div style={{ background:'rgba(34,197,94,.08)', border:'1px solid rgba(34,197,94,.25)', borderRadius:12, padding:'.85rem 1rem', fontSize:'.88rem', color:'rgba(255,255,255,.8)', lineHeight:1.5 }}>
-                Código enviado para <strong>+244 {phone}</strong>.<br/>
-                <span style={{ fontSize:'.78rem', color:'#8892A4' }}>Válido por 10 minutos.</span>
-              </div>
-              <div>
-                <label style={labelStyle}>Código SMS (6 dígitos)</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={otp}
-                  onChange={e => setOtp(e.target.value.replace(/\D/g,'').slice(0,6))}
-                  placeholder="000000"
-                  maxLength={6}
-                  style={{ ...inputStyle, letterSpacing:'.3em', fontSize:'1.4rem', textAlign:'center' }}
-                  autoFocus
-                />
-              </div>
-              {error && <div style={{ background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:10, padding:'.65rem .9rem', fontSize:'var(--rs-body-sm)', color:'#ef4444' }}>{error}</div>}
-              <button onClick={handleVerifyOtp} disabled={loading || otp.length < 6} style={{ background:'var(--rs-grad-hero)', color:'#fff', border:'none', borderRadius:12, padding:'.82rem', fontSize:'var(--rs-body-md)', fontFamily:'var(--rs-font-body)', fontWeight:700, cursor:(loading||otp.length<6)?'default':'pointer', boxShadow:'var(--rs-shadow-btn)', opacity:(loading||otp.length<6)?.5:1, transition:'opacity .2s', width:'100%' }}>
-                {loading ? 'A verificar...' : 'Confirmar código'}
-              </button>
-              <button onClick={() => { setOtpSent(false); setOtp(''); setError('') }} style={{ background:'none', border:'none', color:'#8892A4', fontSize:'.88rem', cursor:'pointer', fontFamily:'var(--rs-font-body)', padding:'.4rem' }}>
-                ← Reenviar ou alterar número
-              </button>
-            </div>
-          )}
-
-          {/* Toggle mode (email only) */}
-          {method === 'email' && !isAdminLogin && (
+          {/* Toggle mode */}
+          {!isAdminLogin && (
             <div style={{ textAlign:'center', marginTop:'1.4rem', fontSize:'var(--rs-body-sm)', color:'#8892A4' }}>
               {mode === 'login' ? (
                 <>Ainda não tens conta?{' '}<button onClick={()=>{setMode('register');setError('')}} style={{ color:'var(--rs-primary)', fontWeight:700, background:'none', border:'none', cursor:'pointer', padding:0 }}>Registar</button></>
@@ -449,19 +295,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Toggle mode (phone) */}
-          {method === 'phone' && !otpSent && !isAdminLogin && (
-            <div style={{ textAlign:'center', marginTop:'1.4rem', fontSize:'var(--rs-body-sm)', color:'#8892A4' }}>
-              {mode === 'login' ? (
-                <>Primeira vez?{' '}<button onClick={()=>{setMode('register');setError('')}} style={{ color:'var(--rs-primary)', fontWeight:700, background:'none', border:'none', cursor:'pointer', padding:0 }}>Criar conta</button></>
-              ) : (
-                <>Já tens conta?{' '}<button onClick={()=>{setMode('login');setError('')}} style={{ color:'var(--rs-primary)', fontWeight:700, background:'none', border:'none', cursor:'pointer', padding:0 }}>Entrar</button></>
-              )}
-            </div>
-          )}
-
-          {/* Invisible reCAPTCHA anchor for phone auth */}
-          <div id="recaptcha-container" />
         </div>
       </div>
 
