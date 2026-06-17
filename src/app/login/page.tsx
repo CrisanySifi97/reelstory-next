@@ -14,6 +14,7 @@ import {
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { DRAMAS } from '@/lib/mock'
+import { cld } from '@/lib/cloudinary'
 
 type Mode = 'login' | 'register'
 
@@ -179,7 +180,7 @@ export default function LoginPage() {
                 {col.items && col.items.length > 0
                   ? [...col.items,...col.items].map((url,i) => (
                     <div key={i} style={{ borderRadius:14, aspectRatio:'2/3', flexShrink:0, overflow:'hidden', background:'#111' }}>
-                      <img src={url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} onError={e=>(e.currentTarget.style.display='none')}/>
+                      <img src={cld(url, 300) ?? url} alt="" loading={i < 3 ? 'eager' : 'lazy'} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} onError={e=>(e.currentTarget.style.display='none')}/>
                     </div>
                   ))
                   : col.fallback.map((d,i) => (
