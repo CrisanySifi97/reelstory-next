@@ -3,13 +3,8 @@ import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft,
-  Play,
-  Plus,
-  Share2,
-  Lock,
-  Star,
-  Eye,
+  ArrowLeft, Play, Plus, Share2, Lock, Star, Eye,
+  Coins, Download, Trash2, Loader2,
 } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import { DRAMAS, BADGE_STYLE } from '@/lib/mock'
@@ -19,12 +14,12 @@ import StarRating from '@/components/StarRating'
 import { useRating } from '@/lib/useRating'
 import { useMyList } from '@/lib/useMyList'
 import { useDrama, useDramas } from '@/lib/useDramas'
-import { Coins } from 'lucide-react'
 import { auth, db } from '@/lib/firebase'
-import { cld } from '@/lib/cloudinary'
+import { cld, hdUrl } from '@/lib/cloudinary'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import type { Episode } from '@/types'
+import { useDownloads } from '@/lib/useDownloads'
 
 const EPISODE_COST = 10
 
@@ -152,6 +147,7 @@ function DetalheContent() {
   const [coins, setCoins] = useState<number | null>(null)
   const { toggle, isInList } = useMyList()
   const inList = isInList(drama.id)
+  const { download, remove: removeDownload, isDownloaded, isDownloading } = useDownloads()
 
   const freeCount   = episodes.filter(e => e.free).length
   const lockedCount = episodes.length - freeCount
@@ -190,8 +186,8 @@ function DetalheContent() {
     return () => { unsubDoc(); unsubAuth() }
   }, [])
 
-  const isUnlocked = (ep: EpisodeWithId) =>
-    ep.free || unlocked.has(`${drama.id}_${ep.id}`)
+  const isUnlocked = (ep: EpisodeWithId, idx = episodes.indexOf(ep)) =>
+    idx === 0 || ep.free || unlocked.has(`${drama.id}_${ep.id}`)
 
   const [descExpanded, setDescExpanded] = useState(false)
 
@@ -510,16 +506,29 @@ function DetalheContent() {
           gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
           gap: '.8rem',
         }}>
-          {episodes.map((ep, i) => (
-            <EpisodeCard
-              key={ep.id ?? i}
-              ep={ep}
-              idx={i}
-              dramaId={drama.id}
-              isUnlocked={isUnlocked(ep)}
-              onClick={() => router.push(`/feed?id=${drama.id}&ep=${i}&_n=${Date.now()}`)}
-            />
-          ))}
+          {episodes.map((ep, i) => {
+            const epKey = ep.id ? `${drama.id}_${ep.id}` : null
+            const videoUrl = ep.url ? hdUrl(ep.url) : undefined
+            return (
+              <EpisodeCard
+                key={ep.id ?? i}
+                ep={ep}
+                idx={i}
+                dramaId={drama.id}
+                isUnlocked={isUnlocked(ep, i)}
+                onClick={() => router.push(`/feed?id=${drama.id}&ep=${i}&_n=${Date.now()}`)}
+                videoUrl={videoUrl}
+                downloaded={epKey ? isDownloaded(epKey) : false}
+                downloading={epKey ? isDownloading(epKey) : false}
+                onDownload={epKey && videoUrl ? () => download({
+                  url: videoUrl, key: epKey,
+                  title: ep.title, dramaTitle: drama.title,
+                  dramaId: drama.id, episodeIdx: i,
+                }) : undefined}
+                onDeleteDownload={epKey ? () => removeDownload(epKey) : undefined}
+              />
+            )
+          })}
         </div>
       </section>
 
@@ -577,11 +586,17 @@ interface EpisodeCardProps {
   dramaId: string
   isUnlocked: boolean
   onClick: () => void
+  videoUrl?: string
+  downloaded?: boolean
+  downloading?: boolean
+  onDownload?: () => void
+  onDeleteDownload?: () => void
 }
 
-function EpisodeCard({ ep, idx, isUnlocked: unlocked, onClick }: EpisodeCardProps) {
+function EpisodeCard({ ep, idx, isUnlocked: unlocked, onClick, videoUrl, downloaded, downloading, onDownload, onDeleteDownload }: EpisodeCardProps) {
   const [hov, setHov] = useState(false)
   const thumb = episodeThumb(ep)
+  const showDl = unlocked && !!videoUrl
 
   return (
     <div
@@ -658,11 +673,37 @@ function EpisodeCard({ ep, idx, isUnlocked: unlocked, onClick }: EpisodeCardProp
         <div style={{
           fontSize: '.72rem',
           fontWeight: 700,
-          color: ep.free ? '#22c55e' : unlocked ? 'rgba(255,255,255,.4)' : 'var(--rs-accent)',
+          color: ep.free || idx === 0 ? '#22c55e' : unlocked ? 'rgba(255,255,255,.4)' : 'var(--rs-accent)',
         }}>
-          {ep.free ? 'Grátis' : unlocked ? 'Desbloqueado' : `${EPISODE_COST} pontos`}
+          {ep.free || idx === 0 ? 'Grátis' : unlocked ? 'Desbloqueado' : `${EPISODE_COST} pontos`}
         </div>
       </div>
+
+      {/* Download button — only for unlocked episodes with a Cloudinary video */}
+      {showDl && (
+        <button
+          onClick={e => {
+            e.stopPropagation()
+            downloaded ? onDeleteDownload?.() : onDownload?.()
+          }}
+          title={downloading ? 'A transferir…' : downloaded ? 'Eliminar download' : 'Transferir para offline'}
+          style={{
+            flexShrink: 0, width: 34, height: 34, borderRadius: '50%',
+            background: downloaded ? 'rgba(255,56,92,.15)' : 'rgba(255,255,255,.08)',
+            border: `1px solid ${downloaded ? 'rgba(255,56,92,.4)' : 'rgba(255,255,255,.15)'}`,
+            color: downloaded ? 'var(--rs-primary)' : 'rgba(255,255,255,.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', transition: 'background .2s, border-color .2s',
+          }}
+        >
+          {downloading
+            ? <Loader2 size={14} style={{ animation: 'spin .9s linear infinite' }}/>
+            : downloaded
+              ? <Trash2 size={14}/>
+              : <Download size={14}/>
+          }
+        </button>
+      )}
     </div>
   )
 }

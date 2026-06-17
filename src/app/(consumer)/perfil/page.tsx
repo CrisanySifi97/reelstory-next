@@ -18,6 +18,7 @@ import {
 } from 'firebase/auth'
 import type { UserProfile } from '@/types'
 import { useFCM } from '@/lib/useFCM'
+import { useDownloads } from '@/lib/useDownloads'
 
 const PLAN_COLORS: Record<string, string> = {
   'Gratuito': '#8892A4', 'Starter': '#22c55e',
@@ -31,7 +32,7 @@ const PLAN_PERKS: Record<string, string[]> = {
 }
 const AVATAR_EMOJIS = ['😊','😎','🎬','🌟','🦁','🐯','🦊','🐺','🦸','🧙','👑','🎭','🌙','⚡','🔥','💎','🎵','🎮','🏆','💫']
 
-type Tab = 'perfil' | 'actividade' | 'configuracoes' | 'seguranca'
+type Tab = 'perfil' | 'actividade' | 'configuracoes' | 'seguranca' | 'downloads'
 
 const st = {
   card: {
@@ -93,6 +94,7 @@ export default function PerfilPage() {
   const [deleting, setDeleting] = useState(false)
 
   const { permission, requestPermission } = useFCM()
+  const { downloads, remove: removeDownload, isDownloading } = useDownloads()
   const fmt = (n: number) => n.toLocaleString('pt-AO')
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast({ msg: '', ok: true }), 3000) }
 
@@ -325,7 +327,7 @@ export default function PerfilPage() {
         <div>
           {/* Tabs */}
           <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,.06)', marginBottom: '1.5rem', overflowX: 'auto', scrollbarWidth: 'none' }}>
-            {([['perfil','Perfil'],['actividade','Actividade'],['configuracoes','Configurações'],['seguranca','Segurança']] as const).map(([key, label]) => (
+            {([['perfil','Perfil'],['actividade','Actividade'],['downloads','Downloads'],['configuracoes','Configurações'],['seguranca','Segurança']] as const).map(([key, label]) => (
               <button key={key} onClick={() => setActiveTab(key)} style={{ padding: '.75rem 1.1rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--rs-body-sm)', fontWeight: 700, whiteSpace: 'nowrap', color: activeTab === key ? 'var(--rs-primary)' : '#8892A4', borderBottom: `3px solid ${activeTab === key ? 'var(--rs-primary)' : 'transparent'}`, marginBottom: -1, transition: 'color .18s, border-color .18s' }}>
                 {label}
               </button>
@@ -500,6 +502,51 @@ export default function PerfilPage() {
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.6rem', padding: '.85rem', background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 12, color: '#ef4444', fontSize: 'var(--rs-body-sm)', fontWeight: 700, cursor: 'pointer', width: '100%', fontFamily: 'var(--rs-font-body)' }}>
                 <LogOut size={16}/> Terminar sessão
               </button>
+            </div>
+          )}
+
+          {/* ═══ DOWNLOADS ═══ */}
+          {activeTab === 'downloads' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {downloads.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#8892A4' }}>
+                  <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📥</div>
+                  <div style={{ fontWeight: 700, marginBottom: '.4rem', color: '#fff' }}>Sem episódios guardados</div>
+                  <div style={{ fontSize: '.85rem', lineHeight: 1.6 }}>
+                    Abre um episódio desbloqueado e toca no ícone <strong style={{ color: '#fff' }}>↓</strong> para guardar para ver offline.
+                  </div>
+                </div>
+              ) : (
+                <div style={st.card}>
+                  <div style={{ padding: '.75rem 1rem', background: 'rgba(255,255,255,.02)', fontSize: '.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.6px', color: '#8892A4', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Episódios guardados ({downloads.length})</span>
+                    <button
+                      onClick={() => { if (confirm('Eliminar todos os downloads?')) downloads.forEach(d => removeDownload(d.key)) }}
+                      style={{ background: 'none', border: 'none', color: 'var(--rs-primary)', fontSize: '.72rem', fontWeight: 700, cursor: 'pointer' }}
+                    >Eliminar tudo</button>
+                  </div>
+                  {downloads.map(d => (
+                    <div key={d.key} style={{ ...st.row, gap: '.85rem' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '.72rem', color: '#8892A4', marginBottom: '.15rem', textTransform: 'uppercase', letterSpacing: '.5px', fontWeight: 700 }}>{d.dramaTitle}</div>
+                        <div style={{ fontSize: '.9rem', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title}</div>
+                        <div style={{ fontSize: '.72rem', color: '#8892A4', marginTop: '.1rem' }}>Ep. {d.episodeIdx + 1} · {new Date(d.savedAt).toLocaleDateString('pt-AO')}</div>
+                      </div>
+                      <button
+                        onClick={() => removeDownload(d.key)}
+                        style={{ flexShrink: 0, width: 34, height: 34, borderRadius: '50%', background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.3)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                      >
+                        <Trash2 size={14}/>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ ...st.card, padding: '1rem' }}>
+                <div style={{ fontSize: '.78rem', color: '#8892A4', lineHeight: 1.6 }}>
+                  <strong style={{ color: '#fff' }}>Como funciona:</strong> Os episódios são guardados no teu dispositivo via cache do browser. Ficam disponíveis mesmo sem internet. Para libertar espaço, elimina os que já viste.
+                </div>
+              </div>
             </div>
           )}
 

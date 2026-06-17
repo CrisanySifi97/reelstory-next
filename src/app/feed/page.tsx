@@ -15,19 +15,11 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { useDrama } from '@/lib/useDramas'
 import { useMyList } from '@/lib/useMyList'
 import Poster from '@/components/Poster'
+import { hdUrl } from '@/lib/cloudinary'
 import type { Episode } from '@/types'
 
 const EPISODE_COST = 10
 type EpisodeWithId = Episode & { id: string }
-
-/** Adds Cloudinary quality/format transformation to a video URL */
-function hdUrl(url?: string): string {
-  if (!url) return ''
-  // q_auto:eco trims bitrate further than plain q_auto (source clips are already
-  // low-res, so the quality hit is minor) and f_auto serves a smaller codec when
-  // supported — q_auto:best was producing very heavy files that stalled on mobile data.
-  return url.replace('/upload/', '/upload/q_auto:eco,f_auto/')
-}
 
 function fmtViews(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
@@ -245,9 +237,8 @@ function FeedContent() {
   }, [episodes.length])
 
   const dramaId2 = drama?.id ?? ''
-  const isUnlocked = (ep: EpisodeWithId) => ep.free || unlocked.has(`${dramaId2}_${ep.id}`)
-  // Same key format as isUnlocked/the unlock-deduction logic — episodes always have an `id`
-  // (assigned by the admin), so no need for an `ep.order` fallback here.
+  const isUnlocked = (ep: EpisodeWithId, idx = episodes.indexOf(ep)) =>
+    idx === 0 || ep.free || unlocked.has(`${dramaId2}_${ep.id}`)
   const epKey = (ep: EpisodeWithId) => `${dramaId2}_${ep.id}`
 
   /* ── Load like counts for the current episode ── */
@@ -575,7 +566,7 @@ function FeedContent() {
                   <span>👁 {fmtViews(drama!.views)}</span>
                   <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
                   <span style={{ color: 'var(--rs-accent)' }}>★ {drama!.rating}</span>
-                  {ep.free && <span style={{ color: '#22c55e', fontWeight: 700 }}>· Grátis</span>}
+                  {(ep.free || idx === 0) && <span style={{ color: '#22c55e', fontWeight: 700 }}>· Grátis</span>}
                 </div>
               </div>
 
