@@ -94,7 +94,7 @@ export default function PerfilPage() {
   const [deleting, setDeleting] = useState(false)
 
   const { permission, requestPermission } = useFCM()
-  const { downloads, remove: removeDownload, isDownloading } = useDownloads()
+  const { downloads, remove: removeDownload } = useDownloads()
   const fmt = (n: number) => n.toLocaleString('pt-AO')
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast({ msg: '', ok: true }), 3000) }
 

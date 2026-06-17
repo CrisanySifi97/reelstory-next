@@ -149,8 +149,8 @@ function DetalheContent() {
   const inList = isInList(drama.id)
   const { download, remove: removeDownload, isDownloaded, isDownloading } = useDownloads()
 
-  const freeCount   = episodes.filter(e => e.free).length
-  const lockedCount = episodes.length - freeCount
+  const freeCount   = episodes.filter((e, i) => e.free || i === 0).length
+  const lockedCount = Math.max(0, episodes.length - freeCount)
   const cast        = (drama.cast && drama.cast.length > 0) ? drama.cast : (PLACEHOLDER_CAST[drama.genre] ?? ['Ana Silva', 'João Santos'])
 
   const similar = allDramas.filter(d => d.id !== drama.id && d.genre === drama.genre).slice(0, 4)
