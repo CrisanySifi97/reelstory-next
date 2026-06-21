@@ -1,7 +1,7 @@
 'use client'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Search, X, Star, SearchX } from 'lucide-react'
 import Nav from '@/components/layout/Nav'
 import BottomNav from '@/components/layout/BottomNav'
@@ -110,8 +110,17 @@ function DramaCard({ drama, onToast }: { drama: typeof DRAMAS[0]; onToast: (m: s
 }
 
 export default function ExplorarPage() {
+  return (
+    <Suspense fallback={null}>
+      <ExplorarPageInner />
+    </Suspense>
+  )
+}
+
+function ExplorarPageInner() {
   const router = useRouter()
-  const [query, setQuery] = useState('')
+  const searchParams = useSearchParams()
+  const [query, setQuery] = useState(searchParams.get('q') ?? '')
   const [genre, setGenre] = useState<Drama['genre'] | 'todos'>('todos')
   const [tab, setTab] = useState<Tab>('emAlta')
   const [toast, setToast] = useState('')

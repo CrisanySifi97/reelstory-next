@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Search, Bell, Coins, X, BellOff, BellRing } from 'lucide-react'
 import { auth, db } from '@/lib/firebase'
 import { doc, getDoc, collection, getDocs, orderBy, query, limit } from 'firebase/firestore'
@@ -21,6 +22,8 @@ export default function Nav({ transparent = false, activeLink }: NavProps) {
   const [loggedIn, setLoggedIn] = useState(false)
   const [dropOpen, setDropOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [searchValue, setSearchValue] = useState('')
+  const router = useRouter()
   const [hover, setHover]       = useState<string | null>(null)
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifs, setNotifs]       = useState<NotifItem[]>([])
@@ -196,6 +199,13 @@ export default function Nav({ transparent = false, activeLink }: NavProps) {
           <input
             ref={searchRef}
             placeholder="Pesquisar dramas..."
+            value={searchValue}
+            onChange={e => setSearchValue(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && searchValue.trim()) {
+                router.push(`/explorar?q=${encodeURIComponent(searchValue.trim())}`)
+              }
+            }}
             onBlur={e => !e.currentTarget.value && setSearchOpen(false)}
             style={{ flex:1, minWidth:0, background:'none', border:'none', color:'#fff', fontFamily:'var(--rs-font-body)', fontSize:'.84rem', outline:'none', opacity: searchOpen ? 1 : 0, transition:'opacity .2s' }}
           />
