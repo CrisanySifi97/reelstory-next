@@ -39,7 +39,7 @@ export default function TermosPage() {
 
         <Section title="2. Descrição do Serviço">
           <P>A ReelStory é uma plataforma de streaming de microdramas verticais, produzidos em Angola e em língua portuguesa. O serviço disponibiliza conteúdos audiovisuais em formato episódico, acessíveis mediante um sistema de pontos adquiridos pelo utilizador.</P>
-          <P>Cada série disponibiliza os dois primeiros episódios gratuitamente. Os episódios seguintes requerem o desbloqueio através de pontos, ao custo de 50 pontos por episódio.</P>
+          <P>Cada série disponibiliza os dois primeiros episódios gratuitamente. Os episódios seguintes requerem o desbloqueio através de pontos, ao custo de 10 pontos por episódio.</P>
         </Section>
 
         <Section title="3. Registo e Conta">

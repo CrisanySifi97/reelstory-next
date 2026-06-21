@@ -476,7 +476,8 @@ export default function PerfilPage() {
 
               <div style={st.card}>
                 <div style={{ padding: '.75rem 1rem', background: 'rgba(255,255,255,.02)', fontSize: '.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.6px', color: '#8892A4' }}>Suporte</div>
-                <div style={st.row}
+                <a href="https://wa.me/244976020849" target="_blank" rel="noopener noreferrer"
+                  style={{ ...st.row, textDecoration: 'none', color: 'inherit' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,.03)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                   <HelpCircle size={18} style={{ marginRight: '.75rem', color: '#8892A4', flexShrink: 0 }}/>
@@ -485,8 +486,9 @@ export default function PerfilPage() {
                     <div style={{ fontSize: 'var(--rs-body-xs)', color: '#8892A4' }}>Contactar suporte · FAQ</div>
                   </div>
                   <ChevronRight size={16} color="#8892A4"/>
-                </div>
-                <div style={{ ...st.row, borderBottom: 'none' }}
+                </a>
+                <Link href="/privacidade"
+                  style={{ ...st.row, borderBottom: 'none', textDecoration: 'none', color: 'inherit' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,.03)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                   <Shield size={18} style={{ marginRight: '.75rem', color: '#8892A4', flexShrink: 0 }}/>
@@ -495,7 +497,7 @@ export default function PerfilPage() {
                     <div style={{ fontSize: 'var(--rs-body-xs)', color: '#8892A4' }}>Termos e condições</div>
                   </div>
                   <ChevronRight size={16} color="#8892A4"/>
-                </div>
+                </Link>
               </div>
 
               <button onClick={async () => { await signOut(auth); window.location.href = '/' }}

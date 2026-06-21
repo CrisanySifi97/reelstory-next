@@ -517,8 +517,7 @@ export default function AdminPage() {
               <Plus size={15}/> Nova série
             </button>
           )}
-          <button className="ibtn"><Bell size={15}/><span className="dot"/></button>
-          <button className="ibtn"><Settings size={15}/></button>
+          <button className="ibtn" onClick={()=>setSection('notificacoes')}><Bell size={15}/><span className="dot"/></button>
         </header>
 
         <div className="content">

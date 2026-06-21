@@ -95,19 +95,6 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Stores */}
-          <div style={{ display:'flex', gap:'.7rem', flexWrap:'wrap', marginBottom:'2rem' }}>
-            {[{ label1:'Descarregar na', label2:'App Store' }, { label1:'Disponível no', label2:'Google Play' }].map(s => (
-              <div key={s.label2} style={{ background:'#000', border:'1px solid rgba(255,255,255,.15)', borderRadius:12, padding:'.6rem 1.1rem', display:'inline-flex', alignItems:'center', gap:'.7rem', cursor:'pointer' }}>
-                <div style={{ width:22, height:22, borderRadius:'50%', background:'rgba(255,255,255,.2)', flexShrink:0 }}/>
-                <div>
-                  <div style={{ fontSize:'.62rem', color:'rgba(255,255,255,.7)', lineHeight:1 }}>{s.label1}</div>
-                  <div style={{ fontSize:'.94rem', fontWeight:700, lineHeight:1.1, marginTop:2 }}>{s.label2}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
           {/* Stats */}
           <div style={{ display:'flex', gap:'2.5rem', paddingTop:'2rem', borderTop:'1px solid rgba(255,255,255,.06)' }}>
             {[['500+','Séries'],['2M+','Fãs'],['4.9★','Avaliação']].map(([n,l])=>(
