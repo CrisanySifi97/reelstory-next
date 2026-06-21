@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/post-social",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/post-social-video",
+      "schedule": "0 19 * * *"
     }
   ]
 }
