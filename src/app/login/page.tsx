@@ -180,7 +180,7 @@ export default function LoginPage() {
                 {col.items && col.items.length > 0
                   ? [...col.items,...col.items].map((url,i) => (
                     <div key={i} style={{ borderRadius:14, aspectRatio:'2/3', flexShrink:0, overflow:'hidden', background:'#111' }}>
-                      <img src={cld(url, 300) ?? url} alt="" loading={i < 3 ? 'eager' : 'lazy'} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} onError={e=>(e.currentTarget.style.display='none')}/>
+                      <img src={cld(url, 220) ?? url} alt="" loading={i < 2 ? 'eager' : 'lazy'} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} onError={e=>(e.currentTarget.style.display='none')}/>
                     </div>
                   ))
                   : col.fallback.map((d,i) => (

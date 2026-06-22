@@ -79,7 +79,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt" translate="no" suppressHydrationWarning className={`${playfair.variable} ${dmSans.variable}`}>
-      <head/>
+      <head>
+        <link rel="preconnect" href="https://res.cloudinary.com" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+      </head>
       <body suppressHydrationWarning>
         {children}
         <PWARegister/>
