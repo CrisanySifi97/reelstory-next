@@ -103,7 +103,9 @@ export default function PerfilPage() {
       if (!fbUser) { window.location.href = '/login'; return }
       try {
         const snap = await getDoc(doc(db, 'users', fbUser.uid))
-        if (snap.exists()) setUser(snap.data() as UserProfile)
+        // uid sempre vem do Auth, nunca dos dados do Firestore — documentos antigos
+        // podem não ter o campo "uid" guardado, o que partia o doc(db,'users',user.uid) a seguir
+        if (snap.exists()) setUser({ ...snap.data(), uid: fbUser.uid } as UserProfile)
         else setUser({ uid: fbUser.uid, name: fbUser.displayName ?? 'Utilizador', email: fbUser.email ?? '', avatar: '😊', plan: 'Gratuito', coins: 40, status: 'Ativo', isAdmin: false })
         // Load orders
         const oSnap = await getDocs(query(collection(db, 'orders'), where('userId', '==', fbUser.uid)))
