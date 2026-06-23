@@ -123,7 +123,7 @@ export default function PerfilPage() {
       if (field === 'name' && auth.currentUser) await updateProfile(auth.currentUser, { displayName: value })
       setEditingField(null)
       showToast('Guardado com sucesso')
-    } catch { showToast('Erro ao guardar', false) }
+    } catch (err) { console.error('[saveField]', field, err); showToast('Erro ao guardar', false) }
     finally { setSaving(false) }
   }
 
