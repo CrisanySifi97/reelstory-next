@@ -259,13 +259,14 @@ export default function PerfilPage() {
   return (
     <div style={{ background: 'var(--rs-bg-warm)', minHeight: '100dvh', color: '#fff', fontFamily: 'var(--rs-font-body)', paddingTop: 'var(--rs-nav-h)',
       backgroundImage: 'radial-gradient(ellipse 80% 35% at 50% 0%, rgba(255,56,92,.08) 0%, transparent 60%)',
+      overflowX: 'hidden',
     }}>
       <Nav activeLink="/perfil"/>
 
       <div className="perfil-layout" style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem', display: 'grid', gridTemplateColumns: '260px 1fr', gap: '2rem' }}>
 
         {/* ── Sidebar ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: 0 }}>
 
           {/* Avatar + name */}
           <div style={{ background: 'rgba(255,255,255,.05)', borderRadius: 20, padding: '1.8rem', textAlign: 'center', border: '1px solid rgba(255,56,92,.15)' }}>
@@ -293,7 +294,7 @@ export default function PerfilPage() {
             )}
 
             <div style={{ fontFamily: 'var(--rs-font-display)', fontWeight: 900, fontSize: '1.1rem', marginBottom: '.2rem' }}>{user.name}</div>
-            <div style={{ fontSize: '.82rem', color: '#8892A4', marginBottom: '1rem' }}>{user.email}</div>
+            <div style={{ fontSize: '.82rem', color: '#8892A4', marginBottom: '1rem', overflowWrap: 'break-word', wordBreak: 'break-word' }}>{user.email}</div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.4rem', fontSize: '.72rem', fontWeight: 700, color: planColor, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '.8rem' }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: planColor, display: 'inline-block' }}/>{user.plan}
@@ -326,7 +327,7 @@ export default function PerfilPage() {
         </div>
 
         {/* ── Main ── */}
-        <div>
+        <div style={{ minWidth: 0 }}>
           {/* Tabs */}
           <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,.06)', marginBottom: '1.5rem', overflowX: 'auto', scrollbarWidth: 'none' }}>
             {([['perfil','Perfil'],['actividade','Actividade'],['downloads','Downloads'],['configuracoes','Configurações'],['seguranca','Segurança']] as const).map(([key, label]) => (
