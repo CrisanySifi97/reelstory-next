@@ -125,7 +125,7 @@ function ExplorarPageInner() {
   const [tab, setTab] = useState<Tab>('emAlta')
   const [toast, setToast] = useState('')
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
-  const { dramas: LIVE_DRAMAS } = useDramas()
+  const { dramas: LIVE_DRAMAS, loading: dramasLoading } = useDramas()
 
   const filtered = useMemo(() => {
     let d = LIVE_DRAMAS.filter(dr =>
@@ -340,7 +340,7 @@ function ExplorarPageInner() {
 
       {/* Results count */}
       <div style={{ padding: '.8rem 4% .3rem', fontSize: 'var(--rs-body-xs)', color: '#8892A4' }}>
-        {filtered.length} {filtered.length === 1 ? 'série' : 'séries'} encontradas
+        {dramasLoading ? 'A carregar séries...' : `${filtered.length} ${filtered.length === 1 ? 'série' : 'séries'} encontradas`}
       </div>
 
       {/* Drama grid */}
@@ -350,10 +350,13 @@ function ExplorarPageInner() {
         gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
         gap: '1.2rem',
       }}>
-        {filtered.map(drama => (
+        {dramasLoading && Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} style={{ aspectRatio: '2/3', borderRadius: 14, background: 'rgba(255,255,255,.06)', animation: 'rs-pulse 1.4s ease-in-out infinite' }} />
+        ))}
+        {!dramasLoading && filtered.map(drama => (
           <DramaCard key={drama.id} drama={drama} onToast={showToast} />
         ))}
-        {filtered.length === 0 && (
+        {!dramasLoading && filtered.length === 0 && (
           <div style={{
             gridColumn: '1/-1',
             display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
@@ -411,6 +414,7 @@ function ExplorarPageInner() {
         input { font-family: var(--rs-font-body); }
         input:focus { border-color: var(--rs-primary) !important; }
         ::-webkit-scrollbar { display: none; }
+        @keyframes rs-pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
       `}</style>
     </div>
   )
