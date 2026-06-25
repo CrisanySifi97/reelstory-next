@@ -7,5 +7,5 @@ export function cld(url: string | undefined, width: number): string | undefined 
 export function hdUrl(url?: string): string {
   if (!url) return ''
   if (!url.includes('res.cloudinary.com')) return url
-  return url.replace('/upload/', '/upload/q_auto:eco,f_auto/')
+  return url.replace('/upload/', '/upload/q_auto:good,f_auto/')
 }
