@@ -364,7 +364,13 @@ export default function AdminPage() {
   const handleDelete = async (id:string, title:string) => {
     if (!confirm(`Eliminar "${title}"?`)) return
     try {
-      await deleteDoc(doc(db,'dramas',id)); showToast('Série eliminada'); loadDramas()
+      // Apaga também as avaliações relacionadas — evita ficarem órfãs (sem série a apontar)
+      const ratingsSnap = await getDocs(query(collection(db,'ratings'), where('dramaId','==',id)))
+      const batch = writeBatch(db)
+      ratingsSnap.docs.forEach(d => batch.delete(d.ref))
+      batch.delete(doc(db,'dramas',id))
+      await batch.commit()
+      showToast('Série eliminada'); loadDramas(); loadRatings()
     } catch (err) { console.error('[handleDelete]', err); showToast('Erro ao eliminar série') }
   }
   const openEpisodes = (d: Drama & {_id:string}) => {
@@ -425,7 +431,10 @@ export default function AdminPage() {
     try {
       const snap = await getDocs(query(collection(db,'ratings'),where('dramaId','==',dramaId)))
       const batch = writeBatch(db); snap.docs.forEach(d=>batch.delete(d.ref))
-      batch.update(doc(db,'dramas',dramaId),{rating:0,ratingCount:0}); await batch.commit()
+      // A série pode já ter sido apagada (avaliações órfãs) — só actualiza o rating se ainda existir
+      const dramaSnap = await getDoc(doc(db,'dramas',dramaId))
+      if (dramaSnap.exists()) batch.update(doc(db,'dramas',dramaId),{rating:0,ratingCount:0})
+      await batch.commit()
       showToast('Avaliações eliminadas'); loadRatings(); loadDramas()
     } catch (err) { console.error('[resetDramaRatings]', err); showToast('Erro ao apagar avaliações') }
   }
