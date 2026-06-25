@@ -39,11 +39,12 @@ service cloud.firestore {
       // Users can update their own doc but cannot change isAdmin or plan,
       // and can only ever decrease their own "coins" (spending points) —
       // crediting points happens server-side (Kursinha webhook, Admin SDK).
-      allow update: if isOwner(uid)
-                    && !request.resource.data.diff(resource.data).affectedKeys()
-                        .hasAny(['isAdmin', 'plan', 'status'])
-                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['coins'])
-                        || request.resource.data.coins <= resource.data.coins);
+      allow update: if isAdmin()
+                    || (isOwner(uid)
+                        && !request.resource.data.diff(resource.data).affectedKeys()
+                            .hasAny(['isAdmin', 'plan', 'status'])
+                        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['coins'])
+                            || request.resource.data.coins <= resource.data.coins));
       allow create: if isOwner(uid);
       allow delete: if isAdmin();
     }
