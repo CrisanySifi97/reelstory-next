@@ -221,7 +221,7 @@ export default function Nav({ transparent = false, activeLink }: NavProps) {
           </button>
 
           {notifOpen && (
-            <div style={{ position:'absolute', top:'calc(100% + 10px)', right:0, width:320, background:'rgba(18,18,30,.98)', border:'1px solid rgba(255,255,255,.1)', borderRadius:16, boxShadow:'0 16px 48px rgba(0,0,0,.6)', backdropFilter:'blur(20px)', zIndex:300, overflow:'hidden' }}>
+            <div style={{ position:'fixed', top:'calc(env(safe-area-inset-top, 0px) + 64px)', right:'.75rem', width:320, maxWidth:'calc(100vw - 1.5rem)', background:'rgba(18,18,30,.98)', border:'1px solid rgba(255,255,255,.1)', borderRadius:16, boxShadow:'0 16px 48px rgba(0,0,0,.6)', backdropFilter:'blur(20px)', zIndex:300, overflow:'hidden' }}>
               {/* Header */}
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'.85rem 1rem .65rem', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
                 <div style={{ fontFamily:'var(--rs-font-display)', fontWeight:900, fontSize:'.92rem' }}>Notificações</div>
