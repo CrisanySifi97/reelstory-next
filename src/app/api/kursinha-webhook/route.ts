@@ -3,7 +3,9 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore, FieldValue, Transaction } from 'firebase-admin/firestore'
 import { getAuth } from 'firebase-admin/auth'
 
-function getAdminDb() {
+// Must run before getAuth()/getFirestore() are called anywhere in this module —
+// they both need a default app to already exist.
+function ensureAdminApp() {
   if (!getApps().length) {
     // Use individual env vars (set in Vercel) instead of full JSON blob
     initializeApp({
@@ -15,6 +17,9 @@ function getAdminDb() {
       }),
     })
   }
+}
+function getAdminDb() {
+  ensureAdminApp()
   return getFirestore()
 }
 
@@ -37,6 +42,8 @@ const PACKAGE_DEFAULTS: Record<string, { pts: number; bonus: number; name: strin
 
 export async function POST(req: NextRequest) {
   try {
+    ensureAdminApp()
+
     // Reject calls that don't carry the shared secret configured in the Kursinha webhook URL
     const token = req.nextUrl.searchParams.get('token')
     if (!process.env.KURSINHA_WEBHOOK_TOKEN || token !== process.env.KURSINHA_WEBHOOK_TOKEN) {
@@ -67,8 +74,8 @@ export async function POST(req: NextRequest) {
         const userRecord = await getAuth().getUserByEmail(email)
         userId = userRecord.uid
         console.log('[kursinha-webhook] resolved userId from email:', email, '→', userId)
-      } catch {
-        console.log('[kursinha-webhook] no Firebase user found for email:', email)
+      } catch (err) {
+        console.log('[kursinha-webhook] no Firebase user found for email:', email, '—', (err as Error).message)
       }
     }
 
