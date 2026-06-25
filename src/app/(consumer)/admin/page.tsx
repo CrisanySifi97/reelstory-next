@@ -175,7 +175,7 @@ export default function AdminPage() {
         const o = overrides.get(p._id)
         return o ? { ...p, ...o } : p
       }))
-    } catch {}
+    } catch (err) { console.error('[loadPkgs]', err) }
   }
 
   const loadDramas = async () => {
@@ -196,16 +196,16 @@ export default function AdminPage() {
           episodes:    data.episodes ?? [],
         } as Drama & {_id:string}
       }))
-    } catch { setDramas(MOCK_DRAMAS.map(d => ({ ...d, _id:d.id })) as (Drama & {_id:string})[]) }
+    } catch (err) { console.error('[loadDramas]', err); setDramas(MOCK_DRAMAS.map(d => ({ ...d, _id:d.id })) as (Drama & {_id:string})[]) }
   }
   const loadUsers = async () => {
-    try { const s = await getDocs(collection(db,'users')); setUsers(s.docs.map(d => ({ _id:d.id, ...d.data() } as UserProfile & {_id:string}))) } catch {}
+    try { const s = await getDocs(collection(db,'users')); setUsers(s.docs.map(d => ({ _id:d.id, ...d.data() } as UserProfile & {_id:string}))) } catch (err) { console.error('[loadUsers]', err) }
   }
   const loadOrders = async () => {
-    try { const s = await getDocs(query(collection(db,'orders'), orderBy('createdAt','desc'))); setOrders(s.docs.map(d => ({ _id:d.id, ...d.data() } as Order & {_id:string}))) } catch {}
+    try { const s = await getDocs(query(collection(db,'orders'), orderBy('createdAt','desc'))); setOrders(s.docs.map(d => ({ _id:d.id, ...d.data() } as Order & {_id:string}))) } catch (err) { console.error('[loadOrders]', err) }
   }
   const loadRatings = async () => {
-    try { const s = await getDocs(query(collection(db,'ratings'), orderBy('updatedAt','desc'))); setRatings(s.docs.map(d => ({ _id:d.id, ...d.data() } as RatingDoc))) } catch {}
+    try { const s = await getDocs(query(collection(db,'ratings'), orderBy('updatedAt','desc'))); setRatings(s.docs.map(d => ({ _id:d.id, ...d.data() } as RatingDoc))) } catch (err) { console.error('[loadRatings]', err) }
   }
   const loadBanners = async () => {
     try {
@@ -221,7 +221,7 @@ export default function AdminPage() {
         if (id==='inicio')   setBInicio(p=>({...p,...d}))
         if (id==='explorar') setBExplorar(p=>({...p,...d}))
       }
-    } catch {}
+    } catch (err) { console.error('[loadBanners]', err) }
   }
   const saveBanner = async (id: BannerPage, data: object) => {
     setBannerSaving(true)
@@ -233,10 +233,10 @@ export default function AdminPage() {
   }
 
   const loadCampaigns = async () => {
-    try { const s = await getDocs(query(collection(db,'campaigns'), orderBy('startDate','desc'))); setCampaigns(s.docs.map(d=>({ _id:d.id, ...d.data() } as Campaign))) } catch {}
+    try { const s = await getDocs(query(collection(db,'campaigns'), orderBy('startDate','desc'))); setCampaigns(s.docs.map(d=>({ _id:d.id, ...d.data() } as Campaign))) } catch (err) { console.error('[loadCampaigns]', err) }
   }
   const loadNotifs = async () => {
-    try { const s = await getDocs(query(collection(db,'notifications'), orderBy('sentAt','desc'))); setNotifs(s.docs.map(d=>({ _id:d.id, ...d.data() } as PushNotif))) } catch {}
+    try { const s = await getDocs(query(collection(db,'notifications'), orderBy('sentAt','desc'))); setNotifs(s.docs.map(d=>({ _id:d.id, ...d.data() } as PushNotif))) } catch (err) { console.error('[loadNotifs]', err) }
   }
 
   /* â"€â"€ Episode inline edit â"€â"€ */
@@ -244,14 +244,18 @@ export default function AdminPage() {
     if (!inlineEp) return
     const drama = dramas.find(d=>d._id===inlineEp.dramaId); if (!drama) return
     const newEps = (drama.episodes||[]).map(e=>e.id===inlineEp.epId?{...e,...inlineEpForm,url:inlineEpForm.url.trim()}:e)
-    await updateDoc(doc(db,'dramas',inlineEp.dramaId),{episodes:newEps})
-    setInlineEp(null); loadDramas(); showToast('Episódio guardado')
+    try {
+      await updateDoc(doc(db,'dramas',inlineEp.dramaId),{episodes:newEps})
+      setInlineEp(null); loadDramas(); showToast('Episódio guardado')
+    } catch (err) { console.error('[saveInlineEp]', err); showToast('Erro ao guardar episódio') }
   }
   const deleteEpFromDrama = async (dramaId:string, epId:string) => {
     if (!confirm('Eliminar episódio?')) return
     const drama = dramas.find(d=>d._id===dramaId); if (!drama) return
-    await updateDoc(doc(db,'dramas',dramaId),{episodes:(drama.episodes||[]).filter(e=>e.id!==epId)})
-    loadDramas(); showToast('Episódio eliminado')
+    try {
+      await updateDoc(doc(db,'dramas',dramaId),{episodes:(drama.episodes||[]).filter(e=>e.id!==epId)})
+      loadDramas(); showToast('Episódio eliminado')
+    } catch (err) { console.error('[deleteEpFromDrama]', err); showToast('Erro ao eliminar episódio') }
   }
 
   /* â"€â"€ Package edit â"€â"€ */
@@ -263,9 +267,9 @@ export default function AdminPage() {
       await setDoc(doc(db,'packages',pkgEditId), data, { merge: true })
       setPkgs(p=>p.map(x=>x._id===pkgEditId?{...x,...data,badge:pkgForm.badge||undefined}:x))
       setPkgEditId(null); showToast('Pacote actualizado')
-    } catch {
-      setPkgs(p=>p.map(x=>x._id===pkgEditId?{...x,name:pkgForm.name,pts:parseInt(pkgForm.pts)||x.pts,bonus:parseInt(pkgForm.bonus)||x.bonus,priceKz:parseInt(pkgForm.priceKz)||x.priceKz,badge:pkgForm.badge||undefined}:x))
-      setPkgEditId(null); showToast('Pacote actualizado localmente')
+    } catch (err) {
+      console.error('[handleSavePkg]', err)
+      showToast('Erro ao guardar — a alteração não foi gravada')
     } finally { setPkgSaving(false) }
   }
 
@@ -281,11 +285,15 @@ export default function AdminPage() {
   }
   const handleDeleteCamp = async (id:string) => {
     if (!confirm('Eliminar campanha?')) return
-    await deleteDoc(doc(db,'campaigns',id)); loadCampaigns(); showToast('Campanha eliminada')
+    try {
+      await deleteDoc(doc(db,'campaigns',id)); loadCampaigns(); showToast('Campanha eliminada')
+    } catch (err) { console.error('[handleDeleteCamp]', err); showToast('Erro ao eliminar campanha') }
   }
   const handleToggleCamp = async (camp:Campaign) => {
-    await updateDoc(doc(db,'campaigns',camp._id),{active:!camp.active})
-    loadCampaigns()
+    try {
+      await updateDoc(doc(db,'campaigns',camp._id),{active:!camp.active})
+      loadCampaigns()
+    } catch (err) { console.error('[handleToggleCamp]', err); showToast('Erro ao actualizar campanha') }
   }
 
   /* â"€â"€ Notifications â"€â"€ */
@@ -355,7 +363,9 @@ export default function AdminPage() {
   }
   const handleDelete = async (id:string, title:string) => {
     if (!confirm(`Eliminar "${title}"?`)) return
-    await deleteDoc(doc(db,'dramas',id)); showToast('Série eliminada'); loadDramas()
+    try {
+      await deleteDoc(doc(db,'dramas',id)); showToast('Série eliminada'); loadDramas()
+    } catch (err) { console.error('[handleDelete]', err); showToast('Erro ao eliminar série') }
   }
   const openEpisodes = (d: Drama & {_id:string}) => {
     setEpDrama(d); setEpList([...(d.episodes||[])].sort((a,b)=>a.order-b.order)); setEpForm(emptyEp((d.episodes?.length||0)+1))
@@ -373,7 +383,9 @@ export default function AdminPage() {
   const handleDeleteEp = async (idx:number) => {
     if (!epDrama || !confirm('Remover episódio?')) return
     const newList = epList.filter((_,i)=>i!==idx)
-    await updateDoc(doc(db,'dramas',epDrama._id), { episodes:newList }); setEpList(newList); loadDramas()
+    try {
+      await updateDoc(doc(db,'dramas',epDrama._id), { episodes:newList }); setEpList(newList); loadDramas()
+    } catch (err) { console.error('[handleDeleteEp]', err); showToast('Erro ao remover episódio') }
   }
   const handleGiveCoins = async () => {
     if (!coinUser || !coinAmt.trim()) return
@@ -385,28 +397,37 @@ export default function AdminPage() {
       await updateDoc(doc(db,'users',coinUser._id), { coins: newCoins })
       showToast(`${coinMode==='dar'?'+':'-'}${abs} pts para ${coinUser.name} · saldo: ${fmt(newCoins)}`)
       setCoinUser(null); setCoinAmt(''); loadUsers()
-    } finally { setCoinSaving(false) }
+    } catch (err) { console.error('[handleGiveCoins]', err); showToast('Erro ao actualizar pontos') }
+    finally { setCoinSaving(false) }
   }
   const handleToggleStatus = async (u: UserProfile & {_id:string}) => {
     const next = u.status==='Ativo' ? 'Suspenso' : 'Ativo'
-    await updateDoc(doc(db,'users',u._id), { status:next }); showToast(`${u.name} → ${next}`); loadUsers()
+    try {
+      await updateDoc(doc(db,'users',u._id), { status:next }); showToast(`${u.name} → ${next}`); loadUsers()
+    } catch (err) { console.error('[handleToggleStatus]', err); showToast('Erro ao actualizar estado') }
   }
   const handleOrderStatus = async (o: Order & {_id:string}, status:'Aprovado'|'Rejeitado') => {
-    await updateDoc(doc(db,'orders',o._id), { status })
-    if (status==='Aprovado' && o.userId) {
-      try {
+    try {
+      await updateDoc(doc(db,'orders',o._id), { status })
+      if (status==='Aprovado' && o.userId) {
         const snap = await getDoc(doc(db,'users',o.userId))
         if (snap.exists()) await updateDoc(doc(db,'users',o.userId), { coins:(snap.data().coins||0)+(o.points||0) })
-      } catch {}
+        else console.error('[handleOrderStatus] utilizador não encontrado, pontos não creditados:', o.userId)
+      }
+      showToast(`Encomenda ${status.toLowerCase()}`); loadOrders()
+    } catch (err) {
+      console.error('[handleOrderStatus]', err)
+      showToast('Erro ao processar encomenda — pontos podem não ter sido creditados')
     }
-    showToast(`Encomenda ${status.toLowerCase()}`); loadOrders()
   }
   const resetDramaRatings = async (dramaId:string, title:string) => {
     if (!confirm(`Apagar avaliações de "${title}"?`)) return
-    const snap = await getDocs(query(collection(db,'ratings'),where('dramaId','==',dramaId)))
-    const batch = writeBatch(db); snap.docs.forEach(d=>batch.delete(d.ref))
-    batch.update(doc(db,'dramas',dramaId),{rating:0,ratingCount:0}); await batch.commit()
-    showToast('Avaliações eliminadas'); loadRatings(); loadDramas()
+    try {
+      const snap = await getDocs(query(collection(db,'ratings'),where('dramaId','==',dramaId)))
+      const batch = writeBatch(db); snap.docs.forEach(d=>batch.delete(d.ref))
+      batch.update(doc(db,'dramas',dramaId),{rating:0,ratingCount:0}); await batch.commit()
+      showToast('Avaliações eliminadas'); loadRatings(); loadDramas()
+    } catch (err) { console.error('[resetDramaRatings]', err); showToast('Erro ao apagar avaliações') }
   }
   const showToast = (msg:string) => { setToast(msg); setTimeout(()=>setToast(''),2800) }
 
@@ -610,7 +631,7 @@ export default function AdminPage() {
                     <tbody>
                       {orders.slice(0,6).map((o,i)=>(
                         <tr key={i}><td>{o.userName||o.userEmail||'—'}</td><td>{o.package}</td><td>{o.method||'Kursinha'}</td>
-                          <td className="right gold">Kz {fmt(parseFloat((o.amount||'0').replace(/D/g,'')))}</td>
+                          <td className="right gold">Kz {fmt(parseFloat((o.amount||'0').replace(/\D/g,'')))}</td>
                           <td className="right">{statusBadge(o.status)}</td>
                         </tr>
                       ))}
