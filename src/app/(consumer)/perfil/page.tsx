@@ -221,6 +221,19 @@ export default function PerfilPage() {
   const planColor = PLAN_COLORS[user.plan] ?? '#8892A4'
   const extra = user as any // for extra fields (phone, dob, bio, lang)
 
+  // Máscaras de formatação — aplicadas enquanto o utilizador escreve
+  const formatPhone = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').replace(/^244/, '').slice(0, 9)
+    const p1 = digits.slice(0, 3), p2 = digits.slice(3, 6), p3 = digits.slice(6, 9)
+    return '+244 ' + [p1, p2, p3].filter(Boolean).join(' ')
+  }
+  const formatDob = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 8)
+    const d = digits.slice(0, 2), m = digits.slice(2, 4), y = digits.slice(4, 8)
+    return [d, m, y].filter(Boolean).join('/')
+  }
+  const FIELD_FORMATTERS: Record<string, (v: string) => string> = { phone: formatPhone, dob: formatDob }
+
   const EditableRow = ({ icon: Icon, label, field, value, placeholder, type = 'text' }: { icon: React.ElementType; label: string; field: string; value: string; placeholder?: string; type?: string }) => (
     <div style={{ ...st.row, flexDirection: editingField === field ? 'column' : 'row', alignItems: editingField === field ? 'stretch' : 'center', gap: editingField === field ? '.6rem' : 0 }}>
       {editingField !== field ? (<>
@@ -232,7 +245,10 @@ export default function PerfilPage() {
         <button onClick={() => { setEditingField(field); setFieldVal(value) }} style={{ background: 'none', border: 'none', color: '#8892A4', cursor: 'pointer', display: 'flex', padding: 4 }}><Edit2 size={14}/></button>
       </>) : (<>
         <label style={st.label}>{label}</label>
-        <input type={type} value={fieldVal} onChange={e => setFieldVal(e.target.value)} autoFocus style={st.input} placeholder={placeholder}
+        <input type={type} value={fieldVal}
+          onChange={e => { const fmt = FIELD_FORMATTERS[field]; setFieldVal(fmt ? fmt(e.target.value) : e.target.value) }}
+          autoFocus style={st.input} placeholder={placeholder}
+          inputMode={field === 'phone' || field === 'dob' ? 'numeric' : undefined}
           onKeyDown={e => { if (e.key === 'Enter') saveField(field, fieldVal); if (e.key === 'Escape') setEditingField(null) }}/>
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={() => saveField(field, fieldVal)} disabled={saving} style={{ ...st.btn, width: 'auto', flex: 1 }}><Save size={13}/>{saving ? '...' : 'Guardar'}</button>
