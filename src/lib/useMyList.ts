@@ -15,7 +15,7 @@ export function useMyList() {
       try {
         const snap = await getDoc(doc(db, 'users', user.uid))
         if (snap.exists()) setMyList(snap.data().myList ?? [])
-      } catch {}
+      } catch (err) { console.error('[useMyList] erro ao carregar', err) }
     })
     return unsub
   }, [])
@@ -29,7 +29,7 @@ export function useMyList() {
       })
       setMyList(prev => isIn ? prev.filter(id => id !== dramaId) : [...prev, dramaId])
       return isIn ? 'removed' : 'added'
-    } catch { return 'login' }
+    } catch (err) { console.error('[useMyList] erro ao actualizar', err); return 'login' }
   }, [uid, myList])
 
   const isInList = (dramaId: string) => myList.includes(dramaId)

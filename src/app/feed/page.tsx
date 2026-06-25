@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { auth, db } from '@/lib/firebase'
 import {
-  doc, getDoc, setDoc, updateDoc,
+  doc, getDoc, setDoc, updateDoc, runTransaction,
   arrayUnion, arrayRemove, increment,
 } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -291,19 +291,37 @@ function FeedContent() {
       setShowNoPoints(true)
       return
     }
-    // Has points — deduct and unlock silently
-    const newCoins = Math.max(0, coins - EPISODE_COST)
-    setCoins(newCoins)
-    setUnlocked(prev => new Set([...prev, key]))
-    setShowNoPoints(false)
-    tryPlay()
-    updateDoc(doc(db, 'users', uid), { coins: newCoins, unlockedEpisodes: arrayUnion(key) }).catch(() => {
-      // Persist failed — roll back the optimistic unlock so the user isn't charged for nothing
-      setCoins(coins)
-      setUnlocked(prev => { const next = new Set(prev); next.delete(key); return next })
-      setShowNoPoints(true)
-      videoRef.current?.pause()
+    // Atomic server-side deduction — reads the real current balance instead of
+    // trusting the client's stale `coins` closure, so rapidly unlocking several
+    // episodes in a row can't under-charge (each transaction sees the previous
+    // one's committed write, retrying automatically on contention).
+    let cancelled = false
+    const userRef = doc(db, 'users', uid)
+    runTransaction(db, async tx => {
+      const snap = await tx.get(userRef)
+      const data = snap.data() ?? {}
+      const already: string[] = data.unlockedEpisodes ?? []
+      if (already.includes(key)) return { unlocked: true, coins: data.coins ?? 0 }
+      const current = data.coins ?? 0
+      if (current < EPISODE_COST) return { unlocked: false, coins: current }
+      const next = current - EPISODE_COST
+      tx.update(userRef, { coins: next, unlockedEpisodes: arrayUnion(key) })
+      return { unlocked: true, coins: next }
+    }).then(result => {
+      if (cancelled) return
+      setCoins(result.coins)
+      if (result.unlocked) {
+        setUnlocked(prev => new Set([...prev, key]))
+        setShowNoPoints(false)
+        tryPlay()
+      } else {
+        setShowNoPoints(true)
+      }
+    }).catch(err => {
+      console.error('[feed] erro ao desbloquear episódio', err)
+      if (!cancelled) { setShowNoPoints(true); videoRef.current?.pause() }
     })
+    return () => { cancelled = true }
   // `coins` and `drama` are read but deliberately excluded: this effect both reads
   // and writes `coins`/`unlocked`, so depending on them would re-trigger the
   // deduction on every update they cause. It re-runs on episode change, login

@@ -14,7 +14,8 @@ export async function verifyAdmin(req: NextRequest): Promise<boolean> {
     const decoded = await admin.auth().verifyIdToken(match[1])
     const snap = await getFirestore().collection('users').doc(decoded.uid).get()
     return snap.exists && snap.data()?.isAdmin === true
-  } catch {
+  } catch (err) {
+    console.error('[verifyAdmin]', err)
     return false
   }
 }

@@ -36,7 +36,7 @@ const PLACEHOLDER_CAST: Record<string, string[]> = {
 
 /** Derives a thumbnail image URL for an episode — a Cloudinary video frame or a YouTube thumbnail */
 function episodeThumb(ep: EpisodeWithId): string | null {
-  if (ep.url) return ep.url.replace('/video/upload/', '/video/upload/so_0/').replace(/\.\w+$/, '.jpg')
+  if (ep.url) return ep.url.replace('/video/upload/', '/video/upload/so_0,q_auto/').replace(/\.\w+$/, '.jpg')
   if (ep.ytId) return `https://img.youtube.com/vi/${ep.ytId}/mqdefault.jpg`
   return null
 }

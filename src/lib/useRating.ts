@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { auth, db } from '@/lib/firebase'
 import {
   doc, getDoc, setDoc,
-  serverTimestamp, updateDoc,
+  serverTimestamp, runTransaction,
 } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 
@@ -46,38 +46,47 @@ export function useRating(dramaId: string) {
     setSubmitting(true)
     setRateError('')
     try {
-      const key = `${dramaId}_${uid}`
+      const key       = `${dramaId}_${uid}`
+      const ratingRef = doc(db, 'ratings', key)
+      const dramaRef  = doc(db, 'dramas', dramaId)
 
-      await setDoc(doc(db, 'ratings', key), {
-        dramaId, userId: uid, rating, updatedAt: serverTimestamp(),
-      }, { merge: true })
+      // Transacção em vez de optimistic update a partir de estado local — lê o
+      // ratingCount/rating reais do servidor, evitando perder votos quando dois
+      // utilizadores avaliam a mesma série quase ao mesmo tempo.
+      const result = await runTransaction(db, async tx => {
+        const [ratingSnap, dramaSnap] = await Promise.all([tx.get(ratingRef), tx.get(dramaRef)])
+        const prevRating   = ratingSnap.exists() ? (ratingSnap.data().rating ?? 0) : 0
+        const isNew        = prevRating === 0
+        const dramaData    = dramaSnap.data() ?? {}
+        const currentAvg   = dramaData.rating ?? 0
+        const currentCount = dramaData.ratingCount ?? 0
+        const newCount     = isNew ? currentCount + 1 : currentCount
+        const newTotal     = currentAvg * currentCount - (isNew ? 0 : prevRating) + rating
+        const avg          = newCount > 0 ? Math.round((newTotal / newCount) * 10) / 10 : rating
+
+        tx.set(ratingRef, { dramaId, userId: uid, rating, updatedAt: serverTimestamp() }, { merge: true })
+        tx.update(dramaRef, { rating: avg, ratingCount: newCount })
+        return { avg, newCount, prevRating, isNew }
+      })
 
       setUserRating(rating)
-
-      // Optimistic aggregate update
-      const isNew = userRating === 0
-      const newCount = isNew ? summary.count + 1 : summary.count
-      const newTotal = summary.avg * summary.count - (isNew ? 0 : userRating) + rating
-      const avg = newCount > 0 ? Math.round((newTotal / newCount) * 10) / 10 : rating
-      const newDist = { ...summary.dist }
-      if (!isNew && userRating > 0) newDist[userRating] = Math.max(0, (newDist[userRating] ?? 0) - 1)
-      newDist[rating] = (newDist[rating] ?? 0) + (isNew ? 1 : 0)
-      setSummary({ avg, count: newCount, dist: newDist })
-
-      // Persist aggregate to drama doc (best-effort)
-      updateDoc(doc(db, 'dramas', dramaId), { rating: avg, ratingCount: newCount })
-        .catch(() => setDoc(doc(db, 'dramas', dramaId), { rating: avg, ratingCount: newCount }, { merge: true }).catch(() => {}))
+      setSummary(s => {
+        const newDist = { ...s.dist }
+        if (!result.isNew && result.prevRating > 0) newDist[result.prevRating] = Math.max(0, (newDist[result.prevRating] ?? 0) - 1)
+        newDist[rating] = (newDist[rating] ?? 0) + (result.isNew ? 1 : 0)
+        return { avg: result.avg, count: result.newCount, dist: newDist }
+      })
 
       return true
     } catch (e: any) {
       const code: string = e?.code ?? e?.message ?? String(e)
-      if (process.env.NODE_ENV === 'development') console.error('[useRating]', code, e)
+      console.error('[useRating]', code, e)
       setRateError(code)
       return false
     } finally {
       setSubmitting(false)
     }
-  }, [uid, dramaId, userRating, summary])
+  }, [uid, dramaId])
 
   return { uid, userRating, summary, rate, submitting, rateError }
 }

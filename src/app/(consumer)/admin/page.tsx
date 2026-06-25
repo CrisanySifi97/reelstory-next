@@ -13,6 +13,7 @@ import { auth, db } from '@/lib/firebase'
 import {
   collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc,
   doc, setDoc, deleteField, orderBy, query, serverTimestamp, where, writeBatch,
+  runTransaction, increment,
 } from 'firebase/firestore'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import type { Drama, UserProfile, Order, Episode } from '@/types'
@@ -397,10 +398,18 @@ export default function AdminPage() {
     if (!coinUser || !coinAmt.trim()) return
     const abs = parseInt(coinAmt); if (isNaN(abs) || abs <= 0) return
     const amt = coinMode === 'retirar' ? -abs : abs
-    const newCoins = Math.max(0, (coinUser.coins||0) + amt)
     setCoinSaving(true)
     try {
-      await updateDoc(doc(db,'users',coinUser._id), { coins: newCoins })
+      // Transacção em vez de ler o saldo do estado local (que pode estar desactualizado
+      // se o utilizador comprou/gastou pontos entre abrir o modal e clicar em guardar)
+      const userRef = doc(db,'users',coinUser._id)
+      const newCoins = await runTransaction(db, async tx => {
+        const snap = await tx.get(userRef)
+        const current = snap.data()?.coins ?? 0
+        const next = Math.max(0, current + amt)
+        tx.update(userRef, { coins: next })
+        return next
+      })
       showToast(`${coinMode==='dar'?'+':'-'}${abs} pts para ${coinUser.name} · saldo: ${fmt(newCoins)}`)
       setCoinUser(null); setCoinAmt(''); loadUsers()
     } catch (err) { console.error('[handleGiveCoins]', err); showToast('Erro ao actualizar pontos') }
@@ -416,9 +425,9 @@ export default function AdminPage() {
     try {
       await updateDoc(doc(db,'orders',o._id), { status })
       if (status==='Aprovado' && o.userId) {
-        const snap = await getDoc(doc(db,'users',o.userId))
-        if (snap.exists()) await updateDoc(doc(db,'users',o.userId), { coins:(snap.data().coins||0)+(o.points||0) })
-        else console.error('[handleOrderStatus] utilizador não encontrado, pontos não creditados:', o.userId)
+        // increment() em vez de ler-depois-escrever — evita perder pontos se duas
+        // encomendas do mesmo utilizador forem aprovadas em simultâneo
+        await updateDoc(doc(db,'users',o.userId), { coins: increment(o.points||0) })
       }
       showToast(`Encomenda ${status.toLowerCase()}`); loadOrders()
     } catch (err) {

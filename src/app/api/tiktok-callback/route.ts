@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const CLIENT_KEY    = 'sbawt03yz7b27dsdsj'
-const CLIENT_SECRET = 'bQprZhgWTf2BX2Ujj5awCFnPysME3iFl'
+const CLIENT_KEY    = process.env.TT_CLIENT_KEY!
+const CLIENT_SECRET = process.env.TT_CLIENT_SECRET!
 const REDIRECT_URI  = 'https://reelstory-next.vercel.app/api/tiktok-callback'
 
 export async function GET(request: NextRequest) {

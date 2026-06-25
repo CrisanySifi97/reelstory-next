@@ -104,7 +104,7 @@ export default function ListaPage() {
       try {
         const snap = await getDoc(doc(db, 'users', user.uid))
         if (snap.exists()) setMyList(snap.data().myList ?? [])
-      } catch {}
+      } catch (err) { console.error('[lista] erro ao carregar lista', err) }
       setLoading(false)
     })
     return unsub
@@ -116,7 +116,7 @@ export default function ListaPage() {
       await updateDoc(doc(db, 'users', uid), { myList: arrayRemove(dramaId) })
       setMyList(prev => prev.filter(id => id !== dramaId))
       showToast('Removido da lista')
-    } catch { showToast('Erro ao remover') }
+    } catch (err) { console.error('[lista] erro ao remover', err); showToast('Erro ao remover') }
   }
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500) }

@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const folder      = searchParams.get('folder') ?? ''
-  const type        = searchParams.get('type')   ?? 'image'   // 'image' | 'video'
+  const typeParam   = searchParams.get('type') ?? 'image'
+  const type        = (typeParam === 'video' ? 'video' : 'image') as 'image' | 'video'
   const maxResults  = Math.min(parseInt(searchParams.get('max') ?? '100'), 200)
   const nextCursor  = searchParams.get('next_cursor') ?? ''
 

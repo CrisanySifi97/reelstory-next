@@ -202,7 +202,7 @@ export default function PontosPage() {
 
   const handleBuy = (baseUrl: string) => {
     if (!uid) { window.location.href = '/login?next=/pontos'; return }
-    const url = `${baseUrl}?metadata[userId]=${uid}&success_url=${encodeURIComponent(window.location.origin + '/kursinha-success')}`
+    const url = `${baseUrl}?metadata[userId]=${encodeURIComponent(uid)}&success_url=${encodeURIComponent(window.location.origin + '/kursinha-success')}`
     window.open(url, '_blank', 'noopener')
   }
 

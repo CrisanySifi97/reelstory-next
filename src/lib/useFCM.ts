@@ -43,7 +43,7 @@ export function useFCM() {
       // Save to Firestore
       const user = auth.currentUser
       if (user && fcmToken) {
-        await updateDoc(doc(db, 'users', user.uid), { fcmToken }).catch(() => {})
+        await updateDoc(doc(db, 'users', user.uid), { fcmToken }).catch(err => console.error('[useFCM] erro ao guardar token', err))
       }
 
       return true

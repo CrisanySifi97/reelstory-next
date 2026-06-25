@@ -32,7 +32,10 @@ async function refreshTikTokToken(db: admin.firestore.Firestore) {
     body: body.toString(),
   })
   const data = await res.json()
-  if (data.error) return { error: data.error.message ?? data.error }
+  if (data.error) {
+    console.error('[refreshTikTokToken] TikTok API error', data.error)
+    return { error: data.error.message ?? data.error }
+  }
 
   await db.collection('config').doc('tiktok').set({
     access_token: data.access_token,
@@ -54,7 +57,10 @@ export async function GET(request: NextRequest) {
   const igId    = process.env.META_IG_BUSINESS_ID!
   const igToken = process.env.META_FB_USER_TOKEN!
 
-  const tiktokRefresh = await refreshTikTokToken(db).catch(e => ({ error: (e as Error).message }))
+  const tiktokRefresh = await refreshTikTokToken(db).catch(e => {
+    console.error('[post-social] erro ao renovar token TikTok', e)
+    return { error: (e as Error).message }
+  })
 
   const snap = await db.collection('socialQueue')
     .where('posted.instagram', '==', false)

@@ -42,6 +42,10 @@ export interface UserProfile {
   lastLogin?: string
   notifOn?: boolean
   fcmToken?: string
+  referralCode?: string
+  referredBy?: string | null
+  referralBonusPaid?: boolean
+  pointsHistory?: { pkg: string; pts: number; date: string; orderId?: string; note?: string }[]
 }
 
 export interface PointsPackage {
