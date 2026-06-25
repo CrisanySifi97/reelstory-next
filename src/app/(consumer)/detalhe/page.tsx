@@ -20,8 +20,7 @@ import { doc, onSnapshot } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import type { Episode } from '@/types'
 import { useDownloads } from '@/lib/useDownloads'
-
-const EPISODE_COST = 10
+import { EPISODE_COST } from '@/lib/constants'
 
 type EpisodeWithId = Episode & { id: string }
 
@@ -214,6 +213,7 @@ function DetalheContent() {
       }}>
         <button
           onClick={() => router.back()}
+          aria-label="Voltar"
           style={{
             width: 38, height: 38, borderRadius: '50%',
             background: 'rgba(0,0,0,.45)',

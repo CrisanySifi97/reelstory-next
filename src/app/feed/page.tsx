@@ -18,7 +18,7 @@ import Poster from '@/components/Poster'
 import { hdUrl } from '@/lib/cloudinary'
 import type { Episode } from '@/types'
 
-const EPISODE_COST = 10
+import { EPISODE_COST } from '@/lib/constants'
 type EpisodeWithId = Episode & { id: string }
 
 function fmtViews(n: number): string {

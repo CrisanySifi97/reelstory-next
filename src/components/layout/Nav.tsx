@@ -32,6 +32,7 @@ export default function Nav({ transparent = false, activeLink }: NavProps) {
   const [fgToast, setFgToast]     = useState<NotifItem | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const notifRef  = useRef<HTMLDivElement>(null)
+  const dropRef   = useRef<HTMLDivElement>(null)
   const { permission, requestPermission } = useFCM()
 
   useEffect(() => {
@@ -87,14 +88,24 @@ export default function Nav({ transparent = false, activeLink }: NavProps) {
   // Load notifications when panel opens
   useEffect(() => { if (notifOpen) loadNotifs() }, [notifOpen, loadNotifs])
 
-  // Close panel on outside click
+  // Close panels on outside click or Escape
   useEffect(() => {
-    const fn = (e: MouseEvent) => {
+    const onClick = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false)
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) setDropOpen(false)
     }
-    if (notifOpen) document.addEventListener('mousedown', fn)
-    return () => document.removeEventListener('mousedown', fn)
-  }, [notifOpen])
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setNotifOpen(false); setDropOpen(false) }
+    }
+    if (notifOpen || dropOpen) {
+      document.addEventListener('mousedown', onClick)
+      document.addEventListener('keydown', onKey)
+    }
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [notifOpen, dropOpen])
 
   // Foreground FCM messages
   useEffect(() => {
@@ -215,6 +226,7 @@ export default function Nav({ transparent = false, activeLink }: NavProps) {
         <div ref={notifRef} style={{ position:'relative', flexShrink:0 }}>
           <button className="nav-icon-btn"
             onClick={() => setNotifOpen(v => !v)}
+            aria-label="Notificações" aria-expanded={notifOpen} aria-haspopup="true"
             style={{ background: notifOpen ? 'rgba(255,56,92,.15)' : 'rgba(255,255,255,.04)', border: '1px solid ' + (notifOpen ? 'rgba(255,56,92,.4)' : 'rgba(255,255,255,.08)'), width: 34, height: 34, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', position: 'relative', transition: 'all .2s' }}>
             <Bell size={14}/>
             {hasUnread && <span style={{ position:'absolute', top:6, right:6, width:7, height:7, borderRadius:'50%', background:'var(--rs-primary)', border:'1.5px solid #0e0e0e' }}/>}
@@ -237,7 +249,7 @@ export default function Nav({ transparent = false, activeLink }: NavProps) {
                   {permission === 'denied' && (
                     <span style={{ fontSize:'.7rem', color:'#ef4444', fontWeight:700, display:'flex', alignItems:'center', gap:3 }}><BellOff size={11}/>Bloqueado</span>
                   )}
-                  <button onClick={() => setNotifOpen(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,.4)', cursor:'pointer', display:'flex', padding:2 }}><X size={14}/></button>
+                  <button onClick={() => setNotifOpen(false)} aria-label="Fechar notificações" style={{ background:'none', border:'none', color:'rgba(255,255,255,.4)', cursor:'pointer', display:'flex', padding:2 }}><X size={14}/></button>
                 </div>
               </div>
 
@@ -297,8 +309,9 @@ export default function Nav({ transparent = false, activeLink }: NavProps) {
         )}
 
         {/* Avatar */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div ref={dropRef} style={{ position: 'relative', flexShrink: 0 }}>
           <button onClick={() => setDropOpen(v => !v)}
+            aria-label="Menu de perfil" aria-expanded={dropOpen} aria-haspopup="true"
             style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'inline-flex', borderRadius:'50%', transition:'transform .2s' }}>
             <div style={{ background:'var(--rs-grad-hero)', padding:2, borderRadius:'50%', boxShadow:'0 0 0 1.5px rgba(14,14,14,1), 0 4px 12px -4px rgba(255,56,92,.55)' }}>
               <div className="nav-avatar" style={{ width:30, height:30, borderRadius:'50%', background:'var(--rs-grad-hero)', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontWeight:700, fontSize:'.78rem' }}>

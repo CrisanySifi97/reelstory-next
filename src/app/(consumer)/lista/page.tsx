@@ -1,16 +1,14 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Bookmark, Play, Trash2, Search } from 'lucide-react'
 import Nav from '@/components/layout/Nav'
 import BottomNav from '@/components/layout/BottomNav'
 import Footer from '@/components/layout/Footer'
-import { auth, db } from '@/lib/firebase'
-import { doc, getDoc, updateDoc, arrayRemove } from 'firebase/firestore'
-import { onAuthStateChanged } from 'firebase/auth'
 import { BADGE_STYLE } from '@/lib/mock'
 import { useDramas } from '@/lib/useDramas'
+import { useMyList } from '@/lib/useMyList'
 import { cld } from '@/lib/cloudinary'
 import type { Drama } from '@/types'
 
@@ -90,33 +88,15 @@ function ListCard({ drama, onRemove }: { drama: DramaWithIcon; onRemove: () => v
 }
 
 export default function ListaPage() {
-  const [uid, setUid]         = useState<string | null>(null)
-  const [myList, setMyList]   = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
+  const { uid, myList, toggle, loading } = useMyList()
   const [query, setQuery]     = useState('')
   const [toast, setToast]     = useState('')
   const { dramas: allDramas }  = useDramas()
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async user => {
-      if (!user) { setLoading(false); return }
-      setUid(user.uid)
-      try {
-        const snap = await getDoc(doc(db, 'users', user.uid))
-        if (snap.exists()) setMyList(snap.data().myList ?? [])
-      } catch (err) { console.error('[lista] erro ao carregar lista', err) }
-      setLoading(false)
-    })
-    return unsub
-  }, [])
-
   const removeFromList = async (dramaId: string) => {
-    if (!uid) return
-    try {
-      await updateDoc(doc(db, 'users', uid), { myList: arrayRemove(dramaId) })
-      setMyList(prev => prev.filter(id => id !== dramaId))
-      showToast('Removido da lista')
-    } catch (err) { console.error('[lista] erro ao remover', err); showToast('Erro ao remover') }
+    const result = await toggle(dramaId)
+    if (result === 'removed') showToast('Removido da lista')
+    else if (result === 'login') showToast('Erro ao remover')
   }
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500) }

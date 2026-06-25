@@ -125,7 +125,7 @@ function ExplorarPageInner() {
   const [tab, setTab] = useState<Tab>('emAlta')
   const [toast, setToast] = useState('')
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
-  const { dramas: LIVE_DRAMAS, loading: dramasLoading } = useDramas()
+  const { dramas: LIVE_DRAMAS, loading: dramasLoading, error: dramasError } = useDramas()
 
   const filtered = useMemo(() => {
     let d = LIVE_DRAMAS.filter(dr =>
@@ -195,6 +195,7 @@ function ExplorarPageInner() {
           {query && (
             <button
               onClick={() => setQuery('')}
+              aria-label="Limpar pesquisa"
               style={{
                 position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
                 background: 'none', border: 'none', cursor: 'pointer',
@@ -335,6 +336,12 @@ function ExplorarPageInner() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {dramasError && (
+        <div style={{ margin: '.8rem 4% 0', padding: '.6rem .9rem', background: 'rgba(245,158,11,.12)', border: '1px solid rgba(245,158,11,.3)', borderRadius: 10, fontSize: '.78rem', color: '#f59e0b' }}>
+          ⚠️ {dramasError}
         </div>
       )}
 

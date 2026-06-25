@@ -45,6 +45,14 @@ export interface UserProfile {
   referralCode?: string
   referredBy?: string | null
   referralBonusPaid?: boolean
+  dob?: string
+  bio?: string
+  lang?: string
+  genres?: string[]
+  notifEps?: boolean
+  notifPromo?: boolean
+  autoplay?: boolean
+  dataMode?: boolean
   pointsHistory?: { pkg: string; pts: number; date: string; orderId?: string; note?: string }[]
 }
 

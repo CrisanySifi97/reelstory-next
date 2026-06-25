@@ -8,11 +8,9 @@ import Footer from '@/components/layout/Footer'
 import { auth, db } from '@/lib/firebase'
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
+import { EPISODE_COST } from '@/lib/constants'
 
 const fmt = (n: number) => n.toLocaleString('pt-AO')
-
-// Points cost to unlock one episode (matches EPISODE_COST in feed/detalhe pages)
-const EPISODE_COST = 10
 
 type Ribbon = { label: string; hot: boolean } | null
 

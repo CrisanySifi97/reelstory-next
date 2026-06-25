@@ -39,6 +39,7 @@ export function useDramas() {
   const [dramas, setDramas]     = useState<(Drama & { icon:string })[]>(cachedDramas ?? [])
   const [loading, setLoading]   = useState(!cachedDramas)
   const [isLive, setIsLive]     = useState(!!cachedDramas)  // true = data came from Firestore
+  const [error, setError]       = useState<string | null>(null)
 
   useEffect(() => {
     if (cachedDramas) return
@@ -58,14 +59,17 @@ export function useDramas() {
         }
         // else keep mock data
       })
-      .catch(() => {
-        // On error, fall back to mock data so page is not empty
-        setDramas(MOCK_DRAMAS as any)
+      .catch(err => {
+        // On error, fall back to mock data so the page isn't empty, but flag it —
+        // a real Firestore outage shouldn't silently look like a normal catalog.
+        console.error('[useDramas] erro ao carregar séries, a usar dados de exemplo', err)
+        setError('Não foi possível carregar as séries — a mostrar conteúdo de exemplo')
+        setDramas(MOCK_DRAMAS as unknown as (Drama & { icon: string })[])
       })
       .finally(() => setLoading(false))
   }, [])
 
-  return { dramas, loading, isLive }
+  return { dramas, loading, isLive, error }
 }
 
 /* ── Load a single drama by ID ── */

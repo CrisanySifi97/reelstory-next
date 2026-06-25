@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 import { auth, db } from '@/lib/firebase'
@@ -39,6 +39,30 @@ export default function LoginPage() {
   const [loginBanner, setLoginBanner] = useState<{
     tagline:string; s1n:string; s1l:string; s2n:string; s2l:string; s3n:string; s3l:string; active:boolean; images?:string[]
   }>({ tagline:'Desbloqueia episódios com pontos. Sem mensalidades.', s1n:'500+', s1l:'Dramas', s2n:'2M+', s2l:'Fãs', s3n:'4.9★', s3l:'Avaliação', active:true, images:[] })
+
+  const createUserDoc = async (uid: string, emailOrPhone: string, displayName: string, inviteCode?: string) => {
+    const ref = doc(db, 'users', uid)
+    const snap = await getDoc(ref)
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        uid,
+        email: emailOrPhone.includes('@') ? emailOrPhone : '',
+        phone: emailOrPhone.includes('@') ? '' : emailOrPhone,
+        name: displayName,
+        avatar: displayName[0]?.toUpperCase() ?? 'U',
+        plan: 'Gratuito',
+        coins: 40 + (inviteCode ? 20 : 0),
+        status: 'Ativo',
+        isAdmin: false,
+        referralCode: uid.slice(0, 8).toUpperCase(),
+        referredBy: inviteCode || null,
+        referralBonusPaid: false,
+        createdAt: serverTimestamp(),
+      })
+    } else if (!snap.data().referralCode) {
+      await updateDoc(ref, { referralCode: uid.slice(0, 8).toUpperCase() })
+    }
+  }
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search)
@@ -84,30 +108,6 @@ export default function LoginPage() {
     }
     return () => unsub()
   }, [])
-
-  const createUserDoc = async (uid: string, emailOrPhone: string, displayName: string, inviteCode?: string) => {
-    const ref = doc(db, 'users', uid)
-    const snap = await getDoc(ref)
-    if (!snap.exists()) {
-      await setDoc(ref, {
-        uid,
-        email: emailOrPhone.includes('@') ? emailOrPhone : '',
-        phone: emailOrPhone.includes('@') ? '' : emailOrPhone,
-        name: displayName,
-        avatar: displayName[0]?.toUpperCase() ?? 'U',
-        plan: 'Gratuito',
-        coins: 40 + (inviteCode ? 20 : 0),
-        status: 'Ativo',
-        isAdmin: false,
-        referralCode: uid.slice(0, 8).toUpperCase(),
-        referredBy: inviteCode || null,
-        referralBonusPaid: false,
-        createdAt: serverTimestamp(),
-      })
-    } else if (!snap.data().referralCode) {
-      await updateDoc(ref, { referralCode: uid.slice(0, 8).toUpperCase() })
-    }
-  }
 
   /* ── Email / password ── */
   const handleSubmit = async (e: React.FormEvent) => {

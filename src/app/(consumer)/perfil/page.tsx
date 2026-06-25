@@ -16,7 +16,7 @@ import {
   reauthenticateWithCredential, EmailAuthProvider,
   sendPasswordResetEmail, deleteUser,
 } from 'firebase/auth'
-import type { UserProfile } from '@/types'
+import type { UserProfile, Order } from '@/types'
 import { useFCM } from '@/lib/useFCM'
 import { useDownloads } from '@/lib/useDownloads'
 
@@ -77,7 +77,7 @@ export default function PerfilPage() {
   const [activeTab, setActiveTab] = useState<Tab>('perfil')
   const [toast, setToast]         = useState({ msg: '', ok: true })
   const [saving, setSaving]       = useState(false)
-  const [orders, setOrders]       = useState<any[]>([])
+  const [orders, setOrders]       = useState<Order[]>([])
 
   // Perfil fields
   const [editingField, setEditingField] = useState<string | null>(null)
@@ -102,18 +102,27 @@ export default function PerfilPage() {
     const unsub = onAuthStateChanged(auth, async fbUser => {
       if (!fbUser) { window.location.href = '/login'; return }
       try {
-        const snap = await getDoc(doc(db, 'users', fbUser.uid))
+        const [snap, oSnap] = await Promise.all([
+          getDoc(doc(db, 'users', fbUser.uid)),
+          getDocs(query(collection(db, 'orders'), where('userId', '==', fbUser.uid))),
+        ])
         // uid sempre vem do Auth, nunca dos dados do Firestore — documentos antigos
         // podem não ter o campo "uid" guardado, o que partia o doc(db,'users',user.uid) a seguir
         if (snap.exists()) setUser({ ...snap.data(), uid: fbUser.uid } as UserProfile)
         else setUser({ uid: fbUser.uid, name: fbUser.displayName ?? 'Utilizador', email: fbUser.email ?? '', avatar: '😊', plan: 'Gratuito', coins: 40, status: 'Ativo', isAdmin: false })
-        // Load orders
-        const oSnap = await getDocs(query(collection(db, 'orders'), where('userId', '==', fbUser.uid)))
-        setOrders(oSnap.docs.map(d => d.data()))
+        setOrders(oSnap.docs.map(d => d.data() as Order))
       } finally { setLoading(false) }
     })
     return unsub
   }, [])
+
+  // Close avatar picker on Escape
+  useEffect(() => {
+    if (!showAvatarPicker) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowAvatarPicker(false) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [showAvatarPicker])
 
   /* ── Save single field ── */
   const saveField = async (field: string, value: any) => {
@@ -219,7 +228,6 @@ export default function PerfilPage() {
   if (!user) return null
 
   const planColor = PLAN_COLORS[user.plan] ?? '#8892A4'
-  const extra = user as any // for extra fields (phone, dob, bio, lang)
 
   // Máscaras de formatação — aplicadas enquanto o utilizador escreve
   const formatPhone = (raw: string) => {
@@ -288,9 +296,9 @@ export default function PerfilPage() {
           <div style={{ background: 'rgba(255,255,255,.05)', borderRadius: 20, padding: '1.8rem', textAlign: 'center', border: '1px solid rgba(255,56,92,.15)' }}>
             <div style={{ position: 'relative', display: 'inline-block', marginBottom: '1rem' }}>
               <div style={{ width: 84, height: 84, borderRadius: '50%', background: 'var(--rs-grad-hero)', border: '3px solid rgba(255,56,92,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.4rem' }}>
-                {(user as any).avatar || user.name?.[0]?.toUpperCase() || '😊'}
+                {user.avatar || user.name?.[0]?.toUpperCase() || '😊'}
               </div>
-              <button onClick={() => setShowAvatarPicker(v => !v)} style={{ position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: '50%', background: 'var(--rs-primary)', border: '2px solid rgba(0,0,0,.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+              <button onClick={() => setShowAvatarPicker(v => !v)} aria-label="Editar avatar" aria-expanded={showAvatarPicker} style={{ position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: '50%', background: 'var(--rs-primary)', border: '2px solid rgba(0,0,0,.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
                 <Edit2 size={11}/>
               </button>
             </div>
@@ -301,7 +309,7 @@ export default function PerfilPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
                   {AVATAR_EMOJIS.map(em => (
                     <button key={em} onClick={() => { saveField('avatar', em); setShowAvatarPicker(false) }}
-                      style={{ background: (user as any).avatar === em ? 'rgba(255,56,92,.2)' : 'rgba(255,255,255,.05)', border: `1px solid ${(user as any).avatar === em ? 'var(--rs-primary)' : 'transparent'}`, borderRadius: 8, padding: '.35rem', cursor: 'pointer', fontSize: '1.2rem' }}>
+                      style={{ background: user.avatar === em ? 'rgba(255,56,92,.2)' : 'rgba(255,255,255,.05)', border: `1px solid ${user.avatar === em ? 'var(--rs-primary)' : 'transparent'}`, borderRadius: 8, padding: '.35rem', cursor: 'pointer', fontSize: '1.2rem' }}>
                       {em}
                     </button>
                   ))}
@@ -359,9 +367,9 @@ export default function PerfilPage() {
               <div style={st.card}>
                 <div style={{ padding: '.75rem 1rem', background: 'rgba(255,255,255,.02)', fontSize: '.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.6px', color: '#8892A4' }}>Informações pessoais</div>
                 <EditableRow icon={User}     label="Nome completo"    field="name"  value={user.name}        placeholder="O teu nome"/>
-                <EditableRow icon={Phone}    label="Telemóvel"        field="phone" value={extra.phone ?? ''} placeholder="+244 9XX XXX XXX" type="tel"/>
-                <EditableRow icon={Calendar} label="Data de nascimento" field="dob" value={extra.dob ?? ''}  placeholder="DD/MM/AAAA"/>
-                <EditableRow icon={FileText} label="Bio / Apresentação" field="bio" value={extra.bio ?? ''}  placeholder="Fala um pouco sobre ti..."/>
+                <EditableRow icon={Phone}    label="Telemóvel"        field="phone" value={user.phone ?? ''} placeholder="+244 9XX XXX XXX" type="tel"/>
+                <EditableRow icon={Calendar} label="Data de nascimento" field="dob" value={user.dob ?? ''}  placeholder="DD/MM/AAAA"/>
+                <EditableRow icon={FileText} label="Bio / Apresentação" field="bio" value={user.bio ?? ''}  placeholder="Fala um pouco sobre ti..."/>
               </div>
 
               <div style={st.card}>
@@ -372,7 +380,7 @@ export default function PerfilPage() {
                     <div style={{ fontSize: 'var(--rs-body-sm)', fontWeight: 600 }}>Idioma</div>
                     <div style={{ fontSize: 'var(--rs-body-xs)', color: '#8892A4' }}>Português (Angola)</div>
                   </div>
-                  <select value={extra.lang ?? 'pt-AO'} onChange={e => saveField('lang', e.target.value)}
+                  <select value={user.lang ?? 'pt-AO'} onChange={e => saveField('lang', e.target.value)}
                     style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', color: '#fff', padding: '.35rem .6rem', borderRadius: 8, fontSize: '.8rem', cursor: 'pointer' }}>
                     <option value="pt-AO">Português (AO)</option>
                     <option value="pt-PT">Português (PT)</option>
@@ -383,14 +391,14 @@ export default function PerfilPage() {
                   <div style={{ fontSize: '.7rem', marginRight: '.75rem', flexShrink: 0 }}>🎬</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 'var(--rs-body-sm)', fontWeight: 600 }}>Géneros favoritos</div>
-                    <div style={{ fontSize: 'var(--rs-body-xs)', color: '#8892A4' }}>{(extra.genres ?? []).join(', ') || 'Nenhum seleccionado'}</div>
+                    <div style={{ fontSize: 'var(--rs-body-xs)', color: '#8892A4' }}>{(user.genres ?? []).join(', ') || 'Nenhum seleccionado'}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', maxWidth: 200, justifyContent: 'flex-end' }}>
                     {['Romance','Suspense','Comédia','Terror','Acção'].map(g => {
-                      const selected = (extra.genres ?? []).includes(g)
+                      const selected = (user.genres ?? []).includes(g)
                       return (
                         <button key={g} onClick={() => {
-                          const cur: string[] = extra.genres ?? []
+                          const cur: string[] = user.genres ?? []
                           const next = selected ? cur.filter((x: string) => x !== g) : [...cur, g]
                           saveField('genres', next)
                         }} style={{ fontSize: '.62rem', fontWeight: 700, padding: '.18rem .45rem', borderRadius: 50, border: `1px solid ${selected ? 'var(--rs-primary)' : 'rgba(255,255,255,.15)'}`, background: selected ? 'rgba(255,56,92,.15)' : 'transparent', color: selected ? 'var(--rs-primary)' : '#8892A4', cursor: 'pointer' }}>
@@ -414,10 +422,10 @@ export default function PerfilPage() {
                   <div style={{ fontSize: '.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.5px', color: '#8892A4', marginBottom: '.4rem' }}>O teu link de convite</div>
                   <div style={{ display: 'flex', gap: '.5rem', alignItems: 'center' }}>
                     <div style={{ flex: 1, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 10, padding: '.55rem .8rem', fontSize: '.82rem', color: 'rgba(255,255,255,.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {typeof window !== 'undefined' ? `${window.location.origin}/login?ref=${(user as any).referralCode ?? '...'}` : '...'}
+                      {typeof window !== 'undefined' ? `${window.location.origin}/login?ref=${user.referralCode ?? '...'}` : '...'}
                     </div>
                     <button onClick={() => {
-                      const link = `${window.location.origin}/login?ref=${(user as any).referralCode}`
+                      const link = `${window.location.origin}/login?ref=${user.referralCode}`
                       if (navigator.share) {
                         navigator.share({ title: 'ReelStory', text: 'Junta-te a mim na ReelStory e recebe 20 pontos de boas-vindas!', url: link }).catch(() => {})
                       } else {
@@ -438,7 +446,7 @@ export default function PerfilPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
                 {[
                   { label: 'Compras', value: orders.length, icon: '🛒' },
-                  { label: 'Pontos gastos', value: orders.reduce((s: number, o: any) => s + (o.points || 0), 0), icon: '🪙' },
+                  { label: 'Pontos gastos', value: orders.reduce((s, o) => s + (o.points || 0), 0), icon: '🪙' },
                   { label: 'Plano', value: user.plan, icon: '⭐' },
                 ].map(s => (
                   <div key={s.label} style={{ background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 14, padding: '1.1rem', textAlign: 'center' }}>
@@ -451,7 +459,7 @@ export default function PerfilPage() {
 
               <div style={st.card}>
                 <div style={{ padding: '.75rem 1rem', background: 'rgba(255,255,255,.02)', fontSize: '.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.6px', color: '#8892A4' }}>Histórico de compras</div>
-                {orders.length > 0 ? orders.slice(0, 8).map((o: any, i: number) => (
+                {orders.length > 0 ? orders.slice(0, 8).map((o, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.8rem 1rem', borderBottom: '1px solid rgba(255,255,255,.04)' }}>
                     <div>
                       <div style={{ fontSize: '.85rem', fontWeight: 600 }}>{o.package} — {o.points} pts</div>
@@ -479,17 +487,17 @@ export default function PerfilPage() {
               <div style={st.card}>
                 <div style={{ padding: '.75rem 1rem', background: 'rgba(255,255,255,.02)', fontSize: '.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.6px', color: '#8892A4' }}>Notificações</div>
                 <Toggle label="Notificações push" sub="Novos episódios, promoções e alertas" value={!!user.notifOn} onChange={handleToggleNotif}/>
-                <Toggle label="Novos episódios" sub="Quando um novo episódio é lançado" value={!!(extra.notifEps ?? true)} onChange={() => saveField('notifEps', !(extra.notifEps ?? true))}/>
+                <Toggle label="Novos episódios" sub="Quando um novo episódio é lançado" value={!!(user.notifEps ?? true)} onChange={() => saveField('notifEps', !(user.notifEps ?? true))}/>
                 <div style={{ ...st.row, borderBottom: 'none' }}>
-                  <Toggle label="Promoções e ofertas" sub="Descontos e bónus de pontos" value={!!(extra.notifPromo ?? true)} onChange={() => saveField('notifPromo', !(extra.notifPromo ?? true))}/>
+                  <Toggle label="Promoções e ofertas" sub="Descontos e bónus de pontos" value={!!(user.notifPromo ?? true)} onChange={() => saveField('notifPromo', !(user.notifPromo ?? true))}/>
                 </div>
               </div>
 
               <div style={st.card}>
                 <div style={{ padding: '.75rem 1rem', background: 'rgba(255,255,255,.02)', fontSize: '.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.6px', color: '#8892A4' }}>Reprodução</div>
-                <Toggle label="Reprodução automática" sub="Passa automaticamente ao próximo episódio" value={!!(extra.autoplay ?? true)} onChange={() => saveField('autoplay', !(extra.autoplay ?? true))}/>
+                <Toggle label="Reprodução automática" sub="Passa automaticamente ao próximo episódio" value={!!(user.autoplay ?? true)} onChange={() => saveField('autoplay', !(user.autoplay ?? true))}/>
                 <div style={{ ...st.row, borderBottom: 'none' }}>
-                  <Toggle label="Modo de dados reduzidos" sub="Qualidade mais baixa para poupar dados" value={!!(extra.dataMode)} onChange={() => saveField('dataMode', !extra.dataMode)}/>
+                  <Toggle label="Modo de dados reduzidos" sub="Qualidade mais baixa para poupar dados" value={!!(user.dataMode)} onChange={() => saveField('dataMode', !user.dataMode)}/>
                 </div>
               </div>
 

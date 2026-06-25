@@ -7,15 +7,17 @@ import { onAuthStateChanged } from 'firebase/auth'
 export function useMyList() {
   const [uid, setUid]       = useState<string | null>(null)
   const [myList, setMyList] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async user => {
-      if (!user) { setUid(null); setMyList([]); return }
+      if (!user) { setUid(null); setMyList([]); setLoading(false); return }
       setUid(user.uid)
       try {
         const snap = await getDoc(doc(db, 'users', user.uid))
         if (snap.exists()) setMyList(snap.data().myList ?? [])
       } catch (err) { console.error('[useMyList] erro ao carregar', err) }
+      setLoading(false)
     })
     return unsub
   }, [])
@@ -34,5 +36,5 @@ export function useMyList() {
 
   const isInList = (dramaId: string) => myList.includes(dramaId)
 
-  return { myList, toggle, isInList, uid }
+  return { myList, toggle, isInList, uid, loading }
 }
