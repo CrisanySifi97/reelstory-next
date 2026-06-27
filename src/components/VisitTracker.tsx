@@ -8,11 +8,16 @@ import { doc, setDoc, increment } from 'firebase/firestore'
 export default function VisitTracker() {
   useEffect(() => {
     if (sessionStorage.getItem('rs_visit_counted')) return
-    sessionStorage.setItem('rs_visit_counted', '1')
 
     const today = new Date().toISOString().split('T')[0]
-    setDoc(doc(db, 'analytics', 'visits'), { total: increment(1) }, { merge: true }).catch(() => {})
-    setDoc(doc(db, 'analytics', 'visits', 'daily', today), { count: increment(1) }, { merge: true }).catch(() => {})
+    Promise.all([
+      setDoc(doc(db, 'analytics', 'visits'), { total: increment(1) }, { merge: true }),
+      setDoc(doc(db, 'analytics', 'visits', 'daily', today), { count: increment(1) }, { merge: true }),
+    ])
+      // Só marca como "contado" depois de confirmar que a escrita funcionou —
+      // caso contrário uma falha (ex: regras do Firestore) nunca mais tentaria de novo nesta sessão.
+      .then(() => sessionStorage.setItem('rs_visit_counted', '1'))
+      .catch(err => console.error('[VisitTracker]', err))
   }, [])
 
   return null
