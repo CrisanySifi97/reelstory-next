@@ -20,7 +20,7 @@ import type { Drama, UserProfile, Order, Episode } from '@/types'
 import { GENRE_LABELS, POINTS_PACKAGES } from '@/types'
 import { DRAMAS as MOCK_DRAMAS } from '@/lib/mock'
 
-type Section = 'dashboard' | 'series' | 'episodios' | 'utilizadores' | 'encomendas' | 'pacotes' | 'campanhas' | 'notificacoes' | 'analytics' | 'avaliacoes' | 'banners'
+type Section = 'dashboard' | 'series' | 'episodios' | 'utilizadores' | 'encomendas' | 'pacotes' | 'campanhas' | 'notificacoes' | 'analytics' | 'avaliacoes' | 'banners' | 'visitas'
 
 interface BannerLanding { title:string; subtitle:string; badge:string; ctaText:string; gradient:string; active:boolean }
 interface BannerLogin   { tagline:string; s1n:string; s1l:string; s2n:string; s2l:string; s3n:string; s3l:string; active:boolean }
@@ -86,6 +86,8 @@ export default function AdminPage() {
   const [users, setUsers]     = useState<(UserProfile & {_id:string})[]>([])
   const [orders, setOrders]   = useState<(Order & {_id:string})[]>([])
   const [ratings, setRatings] = useState<RatingDoc[]>([])
+  const [visitsTotal, setVisitsTotal] = useState(0)
+  const [visitsDaily, setVisitsDaily] = useState<{ date:string; count:number }[]>([])
 
   const [form, setForm]         = useState<DramaForm>(emptyForm())
   const [editId, setEditId]     = useState<string|null>(null)
@@ -165,7 +167,7 @@ export default function AdminPage() {
     return unsub
   }, [])
 
-  useEffect(() => { if (authed) { loadDramas(); loadUsers(); loadOrders(); loadRatings(); loadCampaigns(); loadNotifs(); loadBanners(); loadPkgs() } }, [authed])
+  useEffect(() => { if (authed) { loadDramas(); loadUsers(); loadOrders(); loadRatings(); loadCampaigns(); loadNotifs(); loadBanners(); loadPkgs(); loadVisits() } }, [authed])
 
   const loadPkgs = async () => {
     try {
@@ -207,6 +209,18 @@ export default function AdminPage() {
   }
   const loadRatings = async () => {
     try { const s = await getDocs(query(collection(db,'ratings'), orderBy('updatedAt','desc'))); setRatings(s.docs.map(d => ({ _id:d.id, ...d.data() } as RatingDoc))) } catch (err) { console.error('[loadRatings]', err) }
+  }
+  const loadVisits = async () => {
+    try {
+      const totalSnap = await getDoc(doc(db,'analytics','visits'))
+      setVisitsTotal(totalSnap.data()?.total ?? 0)
+      const dailySnap = await getDocs(collection(db,'analytics','visits','daily'))
+      const days = dailySnap.docs
+        .map(d => ({ date: d.id, count: d.data().count ?? 0 }))
+        .sort((a,b) => b.date.localeCompare(a.date))
+        .slice(0, 30)
+      setVisitsDaily(days)
+    } catch (err) { console.error('[loadVisits]', err) }
   }
   const loadBanners = async () => {
     try {
@@ -529,6 +543,7 @@ export default function AdminPage() {
         <div className="nav-label">Sistema</div>
         {nav('Notificações push', Bell, 'notificacoes', notifs.length||undefined)}
         {nav('Analytics', BarChart3, 'analytics')}
+        {nav('Visitas', Eye, 'visitas')}
         {nav('Banners', Megaphone, 'banners')}
         <Link href="/inicio" className="nav-item" style={{ textDecoration:'none' }}><Settings size={16}/>Voltar ao site</Link>
         <div className="s-foot">
@@ -542,7 +557,7 @@ export default function AdminPage() {
       <div className="main">
         <header className="topbar">
           <div className="pg-title">
-            {({ dashboard:'Dashboard', series:'Séries', episodios:'Episódios', utilizadores:'Utilizadores', encomendas:'Encomendas', pacotes:'Pacotes de Pontos', campanhas:'Campanhas', notificacoes:'Notificações Push', analytics:'Analytics', avaliacoes:'Avaliações', banners:'Banners das Páginas' } as Record<Section,string>)[section]}
+            {({ dashboard:'Dashboard', series:'Séries', episodios:'Episódios', utilizadores:'Utilizadores', encomendas:'Encomendas', pacotes:'Pacotes de Pontos', campanhas:'Campanhas', notificacoes:'Notificações Push', analytics:'Analytics', avaliacoes:'Avaliações', banners:'Banners das Páginas', visitas:'Visitas ao Site' } as Record<Section,string>)[section]}
           </div>
           {section !== 'dashboard' && (
             <div className="search">
@@ -1393,6 +1408,38 @@ export default function AdminPage() {
                     )
                   })}
                 </div>
+              </div>
+            </>)
+          })()}
+
+          {/* ══ VISITAS ══ */}
+          {section==='visitas' && (() => {
+            const today = new Date().toISOString().split('T')[0]
+            const todayCount = visitsDaily.find(d=>d.date===today)?.count ?? 0
+            const last7  = visitsDaily.slice(0,7).reduce((s,d)=>s+d.count,0)
+            const last30 = visitsDaily.reduce((s,d)=>s+d.count,0)
+            const maxDay = Math.max(...visitsDaily.map(d=>d.count), 1)
+            return (<>
+              <div className="kpis" style={{ marginBottom:'1.5rem' }}>
+                <div className="kpi k1"><div className="kpi-lbl">Total de visitas</div><div className="kpi-val">{fmt(visitsTotal)}</div><div className="kpi-d up"><TrendingUp size={12}/>desde o início</div><div className="kpi-ic"><Eye size={18}/></div></div>
+                <div className="kpi k2"><div className="kpi-lbl">Hoje</div><div className="kpi-val">{fmt(todayCount)}</div><div className="kpi-ic"><Activity size={18}/></div></div>
+                <div className="kpi k3"><div className="kpi-lbl">Últimos 7 dias</div><div className="kpi-val">{fmt(last7)}</div><div className="kpi-ic"><TrendingUp size={18}/></div></div>
+                <div className="kpi k4"><div className="kpi-lbl">Últimos 30 dias</div><div className="kpi-val">{fmt(last30)}</div><div className="kpi-ic"><BarChart3 size={18}/></div></div>
+              </div>
+              <div className="card">
+                <div className="t-head"><div className="t-t">Visitas por dia (últimos 30 dias)</div></div>
+                {visitsDaily.length === 0 && <div style={{ padding:'1.5rem', textAlign:'center', color:'var(--rs-text-muted)', fontSize:'.84rem' }}>Ainda sem visitas registadas</div>}
+                {visitsDaily.map(d => (
+                  <div key={d.date} style={{ marginBottom:'.7rem' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'.25rem', fontSize:'.8rem' }}>
+                      <span>{d.date}</span>
+                      <span className="gold">{fmt(d.count)}</span>
+                    </div>
+                    <div style={{ height:6, background:'var(--rs-border-soft)', borderRadius:3, overflow:'hidden' }}>
+                      <div style={{ height:'100%', width:`${Math.round(d.count/maxDay*100)}%`, background:'var(--rs-grad-hero)', borderRadius:3 }}/>
+                    </div>
+                  </div>
+                ))}
               </div>
             </>)
           })()}

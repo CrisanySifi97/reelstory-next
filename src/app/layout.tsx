@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Playfair_Display, DM_Sans } from 'next/font/google'
 import '@/styles/globals.css'
 import PWARegister from '@/components/PWARegister'
+import VisitTracker from '@/components/VisitTracker'
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -86,6 +87,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body suppressHydrationWarning>
         {children}
         <PWARegister/>
+        <VisitTracker/>
       </body>
     </html>
   )

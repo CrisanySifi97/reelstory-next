@@ -114,5 +114,25 @@ service cloud.firestore {
       allow read:  if isAuth();
       allow write: if isAdmin();
     }
+
+    // ── Site visit counters — admin-only read, public increment-by-1 write ──
+    // Visitors (including signed-out ones) need to write a hit on every new
+    // session, but may only ever move "total"/"count" by exactly +1 — never
+    // set an arbitrary value or touch any other field.
+    match /analytics/{id} {
+      allow read: if isAdmin();
+      allow create: if request.resource.data.keys().hasOnly(['total'])
+                    && request.resource.data.total == 1;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['total'])
+                    && request.resource.data.total == resource.data.total + 1;
+
+      match /daily/{date} {
+        allow read: if isAdmin();
+        allow create: if request.resource.data.keys().hasOnly(['count'])
+                      && request.resource.data.count == 1;
+        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
+                      && request.resource.data.count == resource.data.count + 1;
+      }
+    }
   }
 }
