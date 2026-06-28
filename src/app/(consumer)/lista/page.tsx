@@ -31,7 +31,7 @@ function ListCard({ drama, onRemove }: { drama: DramaWithIcon; onRemove: () => v
       }}
     >
       {/* Poster */}
-      <Link href={`/detalhe?id=${drama.id}`} style={{ display: 'block', textDecoration: 'none' }}>
+      <Link href={`/detalhe/${drama.id}`} style={{ display: 'block', textDecoration: 'none' }}>
         <div style={{
           aspectRatio: '9/14',
           background: drama.posterGrad ?? 'var(--rs-poster-romance)',
@@ -63,7 +63,7 @@ function ListCard({ drama, onRemove }: { drama: DramaWithIcon; onRemove: () => v
 
       {/* Info */}
       <div style={{ padding:'.7rem .8rem .6rem' }}>
-        <Link href={`/detalhe?id=${drama.id}`} style={{ textDecoration:'none', color:'#fff' }}>
+        <Link href={`/detalhe/${drama.id}`} style={{ textDecoration:'none', color:'#fff' }}>
           <div style={{ fontWeight:700, fontSize:'.88rem', lineHeight:1.3, marginBottom:'.3rem', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
             {drama.title}
           </div>

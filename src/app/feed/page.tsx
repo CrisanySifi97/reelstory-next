@@ -369,7 +369,7 @@ function FeedContent() {
 
   /* ── Share ── */
   const handleShare = async () => {
-    const url = `${window.location.origin}/detalhe?id=${drama!.id}`
+    const url = `${window.location.origin}/detalhe/${drama!.id}`
     if (navigator.share) {
       await navigator.share({ title: drama!.title, text: `Vê "${drama!.title}" na ReelStory`, url }).catch(() => {})
     } else {

@@ -147,14 +147,14 @@ export default function InicioPage() {
           <img key={heroBanner} src={cld(heroBanner, 1600)} alt="" fetchPriority="high" style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:'center',animation:'heroBannerIn .6s ease forwards' }}/>
         )}
         {/* Clickable background area → detalhe */}
-        <div onClick={()=>hero && router.push(`/detalhe?id=${hero.id}`)} style={{ position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'flex-end',cursor: hero ? 'pointer' : 'default' }}>
+        <div onClick={()=>hero && router.push(`/detalhe/${hero.id}`)} style={{ position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'flex-end',cursor: hero ? 'pointer' : 'default' }}>
           <div style={{ position:'absolute',inset:0,background:`linear-gradient(to right, rgba(20,20,20,${heroBanner?'.9':'1'}) 30%, rgba(20,20,20,.5) 70%, rgba(20,20,20,.1) 100%), linear-gradient(to top, rgba(20,20,20,1) 0%, transparent 50%)` }}/>
           {hero && <div style={{ fontSize:'clamp(180px,28vw,340px)',opacity:.18,marginRight:'4%',filter:'drop-shadow(0 0 80px rgba(255,56,92,.4))',userSelect:'none',lineHeight:1 }} dangerouslySetInnerHTML={{ __html: hero.icon }}/>}
         </div>
         <div style={{ position:'relative',zIndex:1,maxWidth:580 }}>
           {hero ? (<>
           {hero.badge && <span style={{ ...BADGE_STYLE[hero.badge],fontSize:'.68rem',fontWeight:700,padding:'.25rem .7rem',borderRadius:4,textTransform:'uppercase',letterSpacing:'.8px',display:'inline-block',marginBottom:'.75rem' }}>{hero.badge}</span>}
-          <h1 onClick={()=>router.push(`/detalhe?id=${hero.id}`)} style={{ fontFamily:'var(--rs-font-display)',fontWeight:900,fontSize:'clamp(1.8rem,3.5vw,3rem)',lineHeight:1.05,marginBottom:'.7rem',textShadow:'0 2px 20px rgba(0,0,0,.5)',cursor:'pointer' }}>{hero.title}</h1>
+          <h1 onClick={()=>router.push(`/detalhe/${hero.id}`)} style={{ fontFamily:'var(--rs-font-display)',fontWeight:900,fontSize:'clamp(1.8rem,3.5vw,3rem)',lineHeight:1.05,marginBottom:'.7rem',textShadow:'0 2px 20px rgba(0,0,0,.5)',cursor:'pointer' }}>{hero.title}</h1>
           <div style={{ marginBottom:'1rem', maxWidth:480 }}>
             <p style={{ color:'rgba(255,255,255,.8)',fontSize:'.95rem',lineHeight:1.65,margin:0,
               ...(!descExpanded ? { display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical' as any, overflow:'hidden' } : {}),
@@ -173,7 +173,7 @@ export default function InicioPage() {
             <span style={{ textTransform:'capitalize' }}>{hero.genre}</span>
           </div>
           <div style={{ display:'flex',gap:'.8rem',flexWrap:'wrap' }}>
-            <Link href={`/detalhe?id=${hero.id}`} style={{ display:'inline-flex',alignItems:'center',gap:'.5rem',background:'#fff',color:'#000',padding:'.75rem 1.8rem',borderRadius:8,fontSize:'1rem',fontWeight:700,textDecoration:'none' }}>
+            <Link href={`/detalhe/${hero.id}`} style={{ display:'inline-flex',alignItems:'center',gap:'.5rem',background:'#fff',color:'#000',padding:'.75rem 1.8rem',borderRadius:8,fontSize:'1rem',fontWeight:700,textDecoration:'none' }}>
               <Play size={18} fill="#000"/> Ver Detalhes
             </Link>
             <button onClick={() => handleList(hero.id)} style={{ display:'inline-flex',alignItems:'center',gap:'.5rem',background:'rgba(109,109,110,.7)',color:'#fff',border:'none',padding:'.75rem 1.8rem',borderRadius:8,fontSize:'1rem',fontWeight:700,cursor:'pointer' }}>
@@ -220,10 +220,10 @@ export default function InicioPage() {
           {continueWatching.length > 0 && (
             <Row title="Continuar a Ver" items={continueWatching.map(c=>c.drama)} cardFn={(d,i)=><DramaCard key={d.id} drama={d} size="continue" progress={continueWatching[i].progress} onClick={()=>router.push(`/feed?id=${d.id}&_n=${Date.now()}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
           )}
-          <Row title="Top 10 Angola" items={top10} cardFn={(d,i)=><DramaCard key={d.id} drama={d} size="top10" rank={i+1} onClick={()=>router.push(`/detalhe?id=${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
-          <Row title="Novos Episódios" items={novos} cardFn={(d)=><DramaCard key={d.id} drama={d} onClick={()=>router.push(`/detalhe?id=${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
+          <Row title="Top 10 Angola" items={top10} cardFn={(d,i)=><DramaCard key={d.id} drama={d} size="top10" rank={i+1} onClick={()=>router.push(`/detalhe/${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
+          <Row title="Novos Episódios" items={novos} cardFn={(d)=><DramaCard key={d.id} drama={d} onClick={()=>router.push(`/detalhe/${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
           {(['romance','corporativo','suspense','acao','comedia','terror'] as const).map(g=>(
-            <Row key={g} title={({romance:'Romance',corporativo:'Corporativo',suspense:'Suspense',acao:'Acção',comedia:'Comédia',terror:'Terror'})[g]} items={byGenre(g)} cardFn={(d)=><DramaCard key={d.id} drama={d} onClick={()=>router.push(`/detalhe?id=${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
+            <Row key={g} title={({romance:'Romance',corporativo:'Corporativo',suspense:'Suspense',acao:'Acção',comedia:'Comédia',terror:'Terror'})[g]} items={byGenre(g)} cardFn={(d)=><DramaCard key={d.id} drama={d} onClick={()=>router.push(`/detalhe/${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
           ))}
         </div>
       </div>
