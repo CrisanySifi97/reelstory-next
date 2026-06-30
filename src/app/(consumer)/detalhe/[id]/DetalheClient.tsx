@@ -33,8 +33,12 @@ const PLACEHOLDER_CAST: Record<string, string[]> = {
   acao:        ['Hélder Moreira', 'Sandra Lima', 'Nuno Correia'],
 }
 
-/** Derives a thumbnail image URL for an episode — a Cloudinary video frame or a YouTube thumbnail */
+/** Derives a thumbnail image URL for an episode — a Cloudinary/Bunny video frame or a YouTube thumbnail */
 function episodeThumb(ep: EpisodeWithId): string | null {
+  if (ep.url?.includes('.b-cdn.net')) {
+    const guid = ep.url.split('/').find(part => /^[0-9a-f-]{36}$/i.test(part))
+    if (guid) return `https://${new URL(ep.url).hostname}/${guid}/thumbnail.jpg`
+  }
   if (ep.url) return ep.url.replace('/video/upload/', '/video/upload/so_0,q_auto/').replace(/\.\w+$/, '.jpg')
   if (ep.ytId) return `https://img.youtube.com/vi/${ep.ytId}/mqdefault.jpg`
   return null

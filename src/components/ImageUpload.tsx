@@ -3,17 +3,18 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import { Upload, X, Search, Grid, RefreshCw } from 'lucide-react'
 import { auth } from '@/lib/firebase'
 
-const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME    ?? ''
-const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? ''
-
-async function uploadToCloudinary(file: File, folder: string): Promise<string> {
+async function uploadToBunny(file: File, folder: string): Promise<string> {
+  const idToken = await auth.currentUser?.getIdToken()
   const fd = new FormData()
   fd.append('file', file)
-  fd.append('upload_preset', UPLOAD_PRESET)
   fd.append('folder', folder)
-  const res  = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method:'POST', body:fd })
+  const res  = await fetch('/api/bunny-upload', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${idToken}` },
+    body: fd,
+  })
   const data = await res.json()
-  if (data.error) throw new Error(data.error.message)
+  if (data.error) throw new Error(data.error)
   return data.secure_url as string
 }
 
@@ -52,7 +53,7 @@ function CloudinaryBrowser({ folder, onSelect, onClose }: {
       if (folder) params.set('folder', folder)
       if (cursor) params.set('next_cursor', cursor)
       const idToken = await auth.currentUser?.getIdToken()
-      const res  = await fetch(`/api/cloudinary-browse?${params}`, {
+      const res  = await fetch(`/api/bunny-browse?${params}`, {
         headers: { Authorization: `Bearer ${idToken}` },
       })
       const data = await res.json()
@@ -70,7 +71,7 @@ function CloudinaryBrowser({ folder, onSelect, onClose }: {
     (a.display_name ?? '').toLowerCase().includes(search.toLowerCase())
   )
 
-  const thumb = (url: string) => url.replace('/upload/', '/upload/w_200,h_200,c_fill,q_auto:eco/')
+  const thumb = (url: string) => `${url}?width=200&height=200&aspect_ratio=1:1&optimizer=image`
 
   return (
     <div style={{ position:'fixed', inset:0, zIndex:1200, background:'rgba(0,0,0,.75)', backdropFilter:'blur(6px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }} onClick={onClose}>
@@ -79,7 +80,7 @@ function CloudinaryBrowser({ folder, onSelect, onClose }: {
         <div style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'1rem 1.2rem', borderBottom:'1px solid rgba(255,255,255,.07)', flexShrink:0 }}>
           <Grid size={18} style={{ color:'var(--rs-primary)', flexShrink:0 }}/>
           <div>
-            <div style={{ fontWeight:900, fontSize:'.95rem' }}>Biblioteca Cloudinary</div>
+            <div style={{ fontWeight:900, fontSize:'.95rem' }}>Biblioteca Bunny</div>
             <div style={{ fontSize:'.72rem', color:'rgba(255,255,255,.4)' }}>{folder ? `/${folder}` : 'Todos os assets'} · {assets.length} imagens</div>
           </div>
           <div style={{ flex:1, position:'relative' }}>
@@ -142,16 +143,14 @@ export default function ImageUpload({
   const [tab, setTab]                 = useState<'upload'|'url'|'browse'>('browse')
   const [error, setError]             = useState('')
   const [showBrowser, setShowBrowser] = useState(false)
-  const configured = CLOUD_NAME && UPLOAD_PRESET
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith('image/')) { setError('Apenas imagens'); return }
     if (file.size > 10 * 1024 * 1024)   { setError('Maximo 10 MB'); return }
-    if (!configured) { setError('Cloudinary nao configurado'); return }
     setError(''); setUploading(true)
     const tick = setInterval(() => setProgress(p => Math.min(p + 8, 90)), 300)
     try {
-      const url = await uploadToCloudinary(file, folder)
+      const url = await uploadToBunny(file, folder)
       if (single && images.length > 0) images.forEach(old => onRemove(old))
       onAdd(url); setProgress(100)
     } catch (e: any) { setError(e?.message || 'Erro no upload.')
@@ -189,8 +188,8 @@ export default function ImageUpload({
           onMouseLeave={e => ((e.currentTarget as HTMLElement).style.borderColor='')}
           style={{ border:'2px dashed var(--rs-border-base)', borderRadius:12, padding:'1.1rem', textAlign:'center', cursor:canAdd?'pointer':'default', background:'var(--rs-bg-cool-3)', transition:'border-color .2s', userSelect:'none' }}>
           <Grid size={20} style={{ color:'var(--rs-text-muted)', marginBottom:5 }}/>
-          <div style={{ fontSize:'.84rem', fontWeight:600, marginBottom:2 }}>Abrir Biblioteca Cloudinary</div>
-          <div style={{ fontSize:'.70rem', color:'var(--rs-text-muted)' }}>Selecciona uma imagem ja existente no Cloudinary</div>
+          <div style={{ fontSize:'.84rem', fontWeight:600, marginBottom:2 }}>Abrir Biblioteca Bunny</div>
+          <div style={{ fontSize:'.70rem', color:'var(--rs-text-muted)' }}>Selecciona uma imagem ja existente no Bunny</div>
         </div>
       )}
 
