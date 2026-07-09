@@ -36,7 +36,12 @@ export function useRating(dramaId: string) {
     getDoc(doc(db, 'dramas', dramaId)).then(snap => {
       if (snap.exists()) {
         const d = snap.data()
-        setSummary(s => ({ ...s, avg: d.rating ?? 0, count: d.ratingCount ?? 0 }))
+        const rawDist = d.ratingDist ?? {}
+        setSummary({
+          avg: d.rating ?? 0,
+          count: d.ratingCount ?? 0,
+          dist: { 1: rawDist[1] ?? 0, 2: rawDist[2] ?? 0, 3: rawDist[3] ?? 0, 4: rawDist[4] ?? 0, 5: rawDist[5] ?? 0 },
+        })
       }
     }).catch(() => {})
   }, [dramaId])
@@ -64,18 +69,21 @@ export function useRating(dramaId: string) {
         const newTotal     = currentAvg * currentCount - (isNew ? 0 : prevRating) + rating
         const avg          = newCount > 0 ? Math.round((newTotal / newCount) * 10) / 10 : rating
 
+        // Per-star breakdown, persisted so every visitor sees the real
+        // distribution — previously only tracked in local state, so it reset
+        // to all-zero on every fresh page load regardless of ratingCount.
+        const rawDist  = dramaData.ratingDist ?? {}
+        const newDist: Record<number, number> = { 1: rawDist[1] ?? 0, 2: rawDist[2] ?? 0, 3: rawDist[3] ?? 0, 4: rawDist[4] ?? 0, 5: rawDist[5] ?? 0 }
+        if (!isNew && prevRating > 0) newDist[prevRating] = Math.max(0, newDist[prevRating] - 1)
+        newDist[rating] = (newDist[rating] ?? 0) + 1
+
         tx.set(ratingRef, { dramaId, userId: uid, rating, updatedAt: serverTimestamp() }, { merge: true })
-        tx.update(dramaRef, { rating: avg, ratingCount: newCount })
-        return { avg, newCount, prevRating, isNew }
+        tx.update(dramaRef, { rating: avg, ratingCount: newCount, ratingDist: newDist })
+        return { avg, newCount, newDist }
       })
 
       setUserRating(rating)
-      setSummary(s => {
-        const newDist = { ...s.dist }
-        if (!result.isNew && result.prevRating > 0) newDist[result.prevRating] = Math.max(0, (newDist[result.prevRating] ?? 0) - 1)
-        newDist[rating] = (newDist[rating] ?? 0) + (result.isNew ? 1 : 0)
-        return { avg: result.avg, count: result.newCount, dist: newDist }
-      })
+      setSummary({ avg: result.avg, count: result.newCount, dist: result.newDist })
 
       return true
     } catch (e: any) {

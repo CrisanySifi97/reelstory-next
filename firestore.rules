@@ -18,7 +18,7 @@ service cloud.firestore {
       allow write: if isAdmin();
       allow update: if isAuth()
                     && request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['rating', 'ratingCount']);
+                        .hasOnly(['rating', 'ratingCount', 'ratingDist']);
     }
 
     // ── Episodes (sub-collection) — public read, admin write ──
