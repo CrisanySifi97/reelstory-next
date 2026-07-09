@@ -267,6 +267,16 @@ function FeedContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx, unlocked, dramaId2])
 
+  // A just-unlocked episode's <video> only mounts once its URL resolves above
+  // (a render after the unlock itself), so the unlock handler's own tryPlay()
+  // call fires too early and hits an empty videoRef. Once the element for the
+  // *current* episode actually exists with a src, try again.
+  useEffect(() => {
+    const ep = episodes[currentIdx] as EpisodeWithId | undefined
+    if (ep && videoSrc(ep) && !showNoPoints) tryPlay()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedUrls])
+
   /* ── Load like counts for the current episode ── */
   useEffect(() => {
     const ep = episodes[currentIdx]
@@ -575,6 +585,14 @@ function FeedContent() {
               ) : (
                 <div style={{ position: 'absolute', inset: 0 }}>
                   <Poster drama={drama} size="feed" showInfo={false} />
+                  {/* Unlocked but the real URL hasn't resolved from /api/episode-url
+                      yet (in progress) — show a spinner instead of a silent poster,
+                      so a slow connection doesn't look like a stuck/broken screen. */}
+                  {isCurrent && unlckd && !ep.ytId && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+                      <Loader2 size={36} color="#fff" style={{ animation: 'rs-spin 0.9s linear infinite', opacity: .85 }} />
+                    </div>
+                  )}
                 </div>
               )}
 
