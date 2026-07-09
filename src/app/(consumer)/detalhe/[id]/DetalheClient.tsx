@@ -35,6 +35,7 @@ const PLACEHOLDER_CAST: Record<string, string[]> = {
 
 /** Derives a thumbnail image URL for an episode — a Cloudinary/Bunny video frame or a YouTube thumbnail */
 function episodeThumb(ep: EpisodeWithId): string | null {
+  if (ep.thumbnail) return ep.thumbnail
   if (ep.url?.includes('.b-cdn.net')) {
     const guid = ep.url.split('/').find(part => /^[0-9a-f-]{36}$/i.test(part))
     // Bunny Stream (has a video GUID) auto-generates a thumbnail; plain Bunny

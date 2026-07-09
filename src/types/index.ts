@@ -24,6 +24,7 @@ export interface Episode {
   ytId?: string
   url?: string
   publicId?: string
+  thumbnail?: string
   free: boolean
   order: number
 }
