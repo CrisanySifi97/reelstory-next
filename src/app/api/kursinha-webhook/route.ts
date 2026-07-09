@@ -89,17 +89,6 @@ export async function POST(req: NextRequest) {
 
     const db = getAdminDb()
 
-    // ── Idempotency: skip if this orderId was already processed ──
-    if (orderId) {
-      const existing = await db.collection('orders')
-        .where('kursinhaOrderId', '==', orderId)
-        .limit(1)
-        .get()
-      if (!existing.empty) {
-        return NextResponse.json({ ok: true, msg: 'already processed' })
-      }
-    }
-
     // Merge admin overrides from the "packages" collection (edited via the admin "Pacotes"
     // section) on top of the hardcoded defaults, so price/point changes there actually
     // affect what gets credited.
@@ -107,10 +96,23 @@ export async function POST(req: NextRequest) {
     const pkg = { ...PACKAGE_DEFAULTS[pkgKey], ...overrideSnap.data() }
     const totalPts = pkg.pts + pkg.bonus
 
-    // Credit user, pay referral bonus and save the order atomically.
-    // Firestore transactions require all reads before any writes.
-    const orderRef = db.collection('orders').doc()
+    // Idempotency + credit, all inside one transaction. Using orderId as the
+    // doc ID (instead of a random one checked beforehand in a separate query)
+    // means the "already processed?" check and the credit happen atomically —
+    // two concurrent deliveries of the same webhook event can't both pass the
+    // check before either has committed and double-credit the user.
+    if (!orderId) {
+      console.warn('[kursinha-webhook] payload sem orderId — sem protecção contra duplicados para este pedido')
+    }
+    const orderRef = orderId
+      ? db.collection('orders').doc(`kursinha_${orderId}`)
+      : db.collection('orders').doc()
+
+    let alreadyProcessed = false
     await db.runTransaction(async (tx: Transaction) => {
+      const orderSnap = await tx.get(orderRef)
+      if (orderSnap.exists) { alreadyProcessed = true; return }
+
       const userRef  = db.collection('users').doc(userId)
       const userSnap = await tx.get(userRef)
       const userData = userSnap.data()
@@ -164,6 +166,7 @@ export async function POST(req: NextRequest) {
       })
     })
 
+    if (alreadyProcessed) return NextResponse.json({ ok: true, msg: 'already processed' })
     return NextResponse.json({ ok: true, pts: totalPts })
   } catch (err) {
     console.error('[kursinha-webhook]', err)
