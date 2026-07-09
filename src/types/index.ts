@@ -23,6 +23,8 @@ export interface Episode {
   title: string
   ytId?: string
   url?: string
+  hlsUrl?: string
+  bunnyGuid?: string
   publicId?: string
   thumbnail?: string
   free: boolean

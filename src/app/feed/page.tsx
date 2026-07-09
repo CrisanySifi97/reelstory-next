@@ -174,7 +174,7 @@ function FeedContent() {
     setPlaying(true)
     setMuted(false)
     const ep = episodes[currentIdx]
-    const hasVideo = ep && !!(ep.url || ep.ytId)
+    const hasVideo = ep && !!(videoSrc(ep) || ep.ytId)
     if (!hasVideo) {
       progRef.current = setInterval(() => {
         setProgress(p => { if (p >= 100) { clearInterval(progRef.current!); return 100 } return p + 0.25 })
@@ -240,6 +240,32 @@ function FeedContent() {
   const isUnlocked = (ep: EpisodeWithId, idx = episodes.indexOf(ep)) =>
     idx === 0 || ep.free || unlocked.has(`${dramaId2}_${ep.id}`)
   const epKey = (ep: EpisodeWithId) => `${dramaId2}_${ep.id}`
+
+  // Paid episodes no longer carry their real video URL inline (it lives in the
+  // admin-only "episodeUrls" collection) — once one is unlocked, fetch its
+  // actual URL from /api/episode-url, which checks unlockedEpisodes server-side.
+  const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({})
+  const videoSrc = (ep: EpisodeWithId) => ep.url || resolvedUrls[epKey(ep)]
+
+  useEffect(() => {
+    const ep = episodes[currentIdx] as EpisodeWithId | undefined
+    if (!ep || ep.url) return
+    const key = epKey(ep)
+    if (resolvedUrls[key] || !isUnlocked(ep)) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const token = auth.currentUser ? await auth.currentUser.getIdToken() : null
+        const qs = new URLSearchParams({ dramaId: dramaId2, epId: String(ep.id) })
+        const res = await fetch(`/api/episode-url?${qs}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled && data.url) setResolvedUrls(prev => ({ ...prev, [key]: data.url }))
+      } catch { /* silent — falls back to the poster/lock state */ }
+    })()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIdx, unlocked, dramaId2])
 
   /* ── Load like counts for the current episode ── */
   useEffect(() => {
@@ -454,7 +480,7 @@ function FeedContent() {
       <div ref={scrollRef} style={{ flex: 1, overflow: 'auto', scrollSnapType: 'y mandatory', scrollbarWidth: 'none' }}>
         {episodes.map((ep, idx) => {
           const unlckd    = isUnlocked(ep)
-          const hasVideo  = !!(ep.url || ep.ytId)
+          const hasVideo  = !!(videoSrc(ep) || ep.ytId)
           const isCurrent = idx === currentIdx
           const isLiked   = likedEps.has(epKey(ep))
           const isSaved   = isInList(drama!.id)
@@ -466,11 +492,11 @@ function FeedContent() {
               {/* ── Video or Poster ── */}
               {hasVideo && isCurrent ? (
                 <>
-                  {ep.url ? (
+                  {videoSrc(ep) ? (
                     <video
                       ref={videoRef}
-                      key={`${drama!.id}-${ep.url}-${idx}`}
-                      src={hdUrl(ep.url)}
+                      key={`${drama!.id}-${videoSrc(ep)}-${idx}`}
+                      src={hdUrl(videoSrc(ep)!)}
                       playsInline
                       muted={muted}
                       preload="auto"
@@ -522,16 +548,16 @@ function FeedContent() {
                   {/* Preload next episode's metadata only — preloading the full video
                       competed for bandwidth with the one actually playing and caused
                       buffering on mobile data. */}
-                  {episodes[idx + 1]?.url && (
+                  {episodes[idx + 1] && videoSrc(episodes[idx + 1] as EpisodeWithId) && (
                     <video
-                      key={`preload-${episodes[idx + 1].url}`}
-                      src={hdUrl((episodes[idx + 1] as EpisodeWithId).url)}
+                      key={`preload-${videoSrc(episodes[idx + 1] as EpisodeWithId)}`}
+                      src={hdUrl(videoSrc(episodes[idx + 1] as EpisodeWithId)!)}
                       preload="metadata"
                       muted
                       style={{ display: 'none' }}
                     />
                   )}
-                  {ep.url && !videoReady && (
+                  {videoSrc(ep) && !videoReady && (
                     <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                       <Loader2 size={36} color="#fff" style={{ animation: 'rs-spin 0.9s linear infinite', opacity: .85 }} />
                     </div>

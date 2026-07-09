@@ -184,8 +184,24 @@ export default function AdminPage() {
   const loadDramas = async () => {
     try {
       const snap = await getDocs(query(collection(db,'dramas'), orderBy('title')))
+      // Paid episodes' real url/hlsUrl live only in "episodeUrls" (kept out of
+      // the public drama doc) — admins can read that collection, so pull it
+      // once and merge it back in for editing purposes. Wrapped separately:
+      // until firestore.rules granting admins access to it is deployed, this
+      // would 403 — that shouldn't take down the whole admin drama list.
+      let urlsByKey = new Map<string, { url?:string; hlsUrl?:string; bunnyGuid?:string }>()
+      try {
+        const urlsSnap = await getDocs(collection(db,'episodeUrls'))
+        urlsByKey = new Map(urlsSnap.docs.map(d => [d.id, d.data() as { url?:string; hlsUrl?:string; bunnyGuid?:string }]))
+      } catch (err) { console.error('[loadDramas] episodeUrls indisponível (regras ainda não publicadas?)', err) }
+
       setDramas(snap.docs.map(d => {
         const data = d.data()
+        const episodes = (data.episodes ?? []).map((ep: Episode) => {
+          if (ep.free) return ep
+          const saved = urlsByKey.get(`${d.id}_${ep.id}`)
+          return saved ? { ...ep, ...saved } : ep
+        })
         return {
           _id: d.id,
           ...data,
@@ -196,7 +212,7 @@ export default function AdminPage() {
           status:      data.status || 'Ativo',
           rating:      data.rating ?? 0,
           views:       data.views  ?? 0,
-          episodes:    data.episodes ?? [],
+          episodes,
         } as Drama & {_id:string}
       }))
     } catch (err) { console.error('[loadDramas]', err); setDramas(MOCK_DRAMAS.map(d => ({ ...d, _id:d.id })) as (Drama & {_id:string})[]) }
@@ -260,7 +276,10 @@ export default function AdminPage() {
     const drama = dramas.find(d=>d._id===inlineEp.dramaId); if (!drama) return
     const newEps = (drama.episodes||[]).map(e=>e.id===inlineEp.epId?{...e,...inlineEpForm,url:inlineEpForm.url.trim()}:e)
     try {
-      await updateDoc(doc(db,'dramas',inlineEp.dramaId),{episodes:newEps})
+      const batch = writeBatch(db)
+      const safeEps = splitEpisodesForSave(inlineEp.dramaId, newEps, batch)
+      batch.update(doc(db,'dramas',inlineEp.dramaId),{episodes:safeEps})
+      await batch.commit()
       setInlineEp(null); loadDramas(); showToast('Episódio guardado')
     } catch (err) { console.error('[saveInlineEp]', err); showToast('Erro ao guardar episódio') }
   }
@@ -268,7 +287,10 @@ export default function AdminPage() {
     if (!confirm('Eliminar episódio?')) return
     const drama = dramas.find(d=>d._id===dramaId); if (!drama) return
     try {
-      await updateDoc(doc(db,'dramas',dramaId),{episodes:(drama.episodes||[]).filter(e=>e.id!==epId)})
+      const batch = writeBatch(db)
+      batch.update(doc(db,'dramas',dramaId),{episodes:(drama.episodes||[]).filter(e=>e.id!==epId)})
+      batch.delete(doc(db,'episodeUrls',`${dramaId}_${epId}`))
+      await batch.commit()
       loadDramas(); showToast('Episódio eliminado')
     } catch (err) { console.error('[deleteEpFromDrama]', err); showToast('Erro ao eliminar episódio') }
   }
@@ -343,6 +365,25 @@ export default function AdminPage() {
     } finally { setNotifSending(false) }
   }
 
+  // Splits an episodes array before it's written to the public "dramas" doc:
+  // paid (non-free) episodes' url/hlsUrl/bunnyGuid go to the admin-only
+  // "episodeUrls/{dramaId}_{epId}" doc instead, since a locked episode's
+  // video must never be readable from the publicly-readable drama document.
+  // Writes both in one batch and returns the safe episodes array to store.
+  const splitEpisodesForSave = (dramaId: string, episodes: Episode[], batch: ReturnType<typeof writeBatch>): Episode[] => {
+    return episodes.map((ep, idx) => {
+      // The player always treats the first episode as watchable regardless of
+      // its "free" flag (legacy fallback) — keep its url inline too.
+      if (ep.free || idx === 0) return ep
+      const key = `${dramaId}_${ep.id}`
+      if (ep.url || ep.hlsUrl || ep.bunnyGuid) {
+        batch.set(doc(db,'episodeUrls',key), { url: ep.url ?? null, hlsUrl: ep.hlsUrl ?? null, bunnyGuid: ep.bunnyGuid ?? null })
+      }
+      const { url, hlsUrl, bunnyGuid, thumbnail, publicId, ...safe } = ep
+      return safe
+    })
+  }
+
   const handleSaveDrama = async () => {
     if (!form.title.trim()) return
     setSaving(true)
@@ -366,11 +407,17 @@ export default function AdminPage() {
       const episodes: Episode[] = formEps
         .filter(e=>e.title.trim()&&e.url.trim())
         .map((e,i)=>({ id:Date.now().toString()+i, title:e.title.trim(), url:e.url.trim(), free:e.free, order:i+1 }))
+      const batch = writeBatch(db)
       if (editId) {
-        await updateDoc(doc(db,'dramas',editId), { ...data, ...(episodes.length?{episodes}:{}) })
+        const safeEpisodes = splitEpisodesForSave(editId, episodes, batch)
+        batch.update(doc(db,'dramas',editId), { ...data, ...(episodes.length?{episodes:safeEpisodes}:{}) })
+        await batch.commit()
         showToast('Série actualizada')
       } else {
-        await addDoc(collection(db,'dramas'), { ...data, episodes, createdAt:serverTimestamp() })
+        const newRef = doc(collection(db,'dramas'))
+        const safeEpisodes = splitEpisodesForSave(newRef.id, episodes, batch)
+        batch.set(newRef, { ...data, episodes:safeEpisodes, createdAt:serverTimestamp() })
+        await batch.commit()
         showToast(`Série criada com ${episodes.length} episódio${episodes.length!==1?'s':''}`)
       }
       setShowForm(false); setEditId(null); setForm(emptyForm()); setFormEps([]); loadDramas()
@@ -397,15 +444,23 @@ export default function AdminPage() {
     try {
       const newEp: Episode = { id:Date.now().toString(), title:epForm.title.trim(), url:epForm.url.trim(), free:epForm.free, order:epForm.order }
       const newList = [...epList, newEp].sort((a,b)=>a.order-b.order)
-      await updateDoc(doc(db,'dramas',epDrama._id), { episodes:newList })
+      const batch = writeBatch(db)
+      const safeList = splitEpisodesForSave(epDrama._id, newList, batch)
+      batch.update(doc(db,'dramas',epDrama._id), { episodes:safeList })
+      await batch.commit()
       setEpList(newList); setEpForm(emptyEp(newList.length+1)); showToast('Episódio adicionado'); loadDramas()
     } finally { setEpSaving(false) }
   }
   const handleDeleteEp = async (idx:number) => {
     if (!epDrama || !confirm('Remover episódio?')) return
+    const removed = epList[idx]
     const newList = epList.filter((_,i)=>i!==idx)
     try {
-      await updateDoc(doc(db,'dramas',epDrama._id), { episodes:newList }); setEpList(newList); loadDramas()
+      const batch = writeBatch(db)
+      batch.update(doc(db,'dramas',epDrama._id), { episodes:newList })
+      if (removed) batch.delete(doc(db,'episodeUrls',`${epDrama._id}_${removed.id}`))
+      await batch.commit()
+      setEpList(newList); loadDramas()
     } catch (err) { console.error('[handleDeleteEp]', err); showToast('Erro ao remover episódio') }
   }
   const handleGiveCoins = async () => {

@@ -194,6 +194,31 @@ export default function DetalheClient({ id }: { id: string }) {
   const isUnlocked = (ep: EpisodeWithId, idx = episodes.indexOf(ep)) =>
     idx === 0 || ep.free || unlocked.has(`${drama.id}_${ep.id}`)
 
+  // Paid episodes' real URL lives in the protected "episodeUrls" collection —
+  // resolve it for any episode the user has actually unlocked, so the
+  // download button (which only appears for unlocked episodes) has a URL to use.
+  const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({})
+  useEffect(() => {
+    const toFetch = episodes.filter((ep, i) => !ep.url && isUnlocked(ep, i) && !resolvedUrls[`${drama.id}_${ep.id}`])
+    if (!toFetch.length) return
+    let cancelled = false
+    ;(async () => {
+      const token = auth.currentUser ? await auth.currentUser.getIdToken() : null
+      for (const ep of toFetch) {
+        if (cancelled) return
+        try {
+          const qs = new URLSearchParams({ dramaId: drama.id, epId: String(ep.id) })
+          const res = await fetch(`/api/episode-url?${qs}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+          if (!res.ok) continue
+          const data = await res.json()
+          if (!cancelled && data.url) setResolvedUrls(prev => ({ ...prev, [`${drama.id}_${ep.id}`]: data.url }))
+        } catch { /* silent — download button just stays hidden */ }
+      }
+    })()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unlocked, drama.id])
+
   const [descExpanded, setDescExpanded] = useState(false)
 
   return (
@@ -514,7 +539,8 @@ export default function DetalheClient({ id }: { id: string }) {
         }}>
           {episodes.map((ep, i) => {
             const epKey = ep.id ? `${drama.id}_${ep.id}` : null
-            const videoUrl = ep.url ? hdUrl(ep.url) : undefined
+            const realUrl = ep.url || (epKey ? resolvedUrls[epKey] : undefined)
+            const videoUrl = realUrl ? hdUrl(realUrl) : undefined
             return (
               <EpisodeCard
                 key={ep.id ?? i}

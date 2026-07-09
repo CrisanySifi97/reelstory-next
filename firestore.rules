@@ -94,6 +94,16 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ── Episode URLs — admin/server only, never client-readable ─
+    // Real video URLs for paid (non-free) episodes live here instead of on the
+    // public "dramas" doc, so a locked episode's video can't be read directly
+    // by anyone with a Firestore SDK. Only the Admin SDK (used by
+    // /api/episode-url after it verifies the caller unlocked this episode)
+    // and the admin panel may read/write this collection.
+    match /episodeUrls/{key} {
+      allow read, write: if isAdmin();
+    }
+
     // ── Episode stats (likes counter) — public read, authenticated write ─
     // Clients only ever toggle a like, so "likes" may only move by exactly ±1
     // (or be created at exactly 1) per write.
