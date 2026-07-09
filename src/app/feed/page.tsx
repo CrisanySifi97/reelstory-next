@@ -404,6 +404,16 @@ function FeedContent() {
     setVideoReady(false)
   }, [currentIdx])
 
+  // "Desliza" swipe hint — shown once the drama is visible, then gone for good.
+  // Keyed off dramaLoading (not mount time) so a slow fetch doesn't burn the
+  // 3s window before the user ever sees the screen.
+  const [showSwipeHint, setShowSwipeHint] = useState(true)
+  useEffect(() => {
+    if (dramaLoading) return
+    const t = setTimeout(() => setShowSwipeHint(false), 3000)
+    return () => clearTimeout(t)
+  }, [dramaLoading])
+
   // Loading / not found guard
   if (dramaLoading) return (
     <div style={{ position:'fixed', inset:0, background:'#000', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontFamily:'var(--rs-font-body)' }}>
@@ -637,7 +647,7 @@ function FeedContent() {
               )}
 
               {/* Swipe hint */}
-              {idx === 0 && isCurrent && episodes.length > 1 && (
+              {idx === 0 && isCurrent && episodes.length > 1 && showSwipeHint && (
                 <div style={{ position: 'absolute', bottom: 110, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, zIndex: 10, animation: 'rs-bounce .9s ease-in-out infinite', pointerEvents: 'none' }}>
                   <ChevronUp size={22} color="rgba(255,255,255,.6)" />
                   <span style={{ fontSize: '.6rem', fontWeight: 700, color: 'rgba(255,255,255,.5)', letterSpacing: '.5px', textTransform: 'uppercase' }}>Desliza</span>

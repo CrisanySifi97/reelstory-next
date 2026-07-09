@@ -37,9 +37,11 @@ const PLACEHOLDER_CAST: Record<string, string[]> = {
 function episodeThumb(ep: EpisodeWithId): string | null {
   if (ep.url?.includes('.b-cdn.net')) {
     const guid = ep.url.split('/').find(part => /^[0-9a-f-]{36}$/i.test(part))
-    if (guid) return `https://${new URL(ep.url).hostname}/${guid}/thumbnail.jpg`
+    // Bunny Stream (has a video GUID) auto-generates a thumbnail; plain Bunny
+    // Storage files (uploaded directly, no GUID) have no frame to derive one from.
+    return guid ? `https://${new URL(ep.url).hostname}/${guid}/thumbnail.jpg` : null
   }
-  if (ep.url) return ep.url.replace('/video/upload/', '/video/upload/so_0,q_auto/').replace(/\.\w+$/, '.jpg')
+  if (ep.url?.includes('res.cloudinary.com')) return ep.url.replace('/video/upload/', '/video/upload/so_0,q_auto/').replace(/\.\w+$/, '.jpg')
   if (ep.ytId) return `https://img.youtube.com/vi/${ep.ytId}/mqdefault.jpg`
   return null
 }
