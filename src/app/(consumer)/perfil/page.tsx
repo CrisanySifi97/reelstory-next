@@ -188,13 +188,17 @@ export default function PerfilPage() {
     } finally { setEmailSaving(false) }
   }
 
-  /* ── Delete account ── */
+  /* ── Delete account ──
+     Auth deletion first: it's the step that can fail with
+     auth/requires-recent-login, and if it fails we want the Firestore
+     profile (coins, purchase history) still intact — not wiped while the
+     login itself survives. */
   const handleDeleteAccount = async () => {
     if (!user || !auth.currentUser || deleteConfirm !== 'ELIMINAR') return
     setDeleting(true)
     try {
-      await deleteDoc(doc(db, 'users', user.uid))
       await deleteUser(auth.currentUser)
+      await deleteDoc(doc(db, 'users', user.uid)).catch(() => {})
       window.location.href = '/'
     } catch (e: any) {
       if (e.code === 'auth/requires-recent-login') {

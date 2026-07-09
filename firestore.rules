@@ -46,7 +46,10 @@ service cloud.firestore {
                         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['coins'])
                             || request.resource.data.coins <= resource.data.coins));
       allow create: if isOwner(uid);
-      allow delete: if isAdmin();
+      // Owners can delete their own profile (perfil "Eliminar conta" flow) —
+      // was admin-only, which meant that flow silently failed to actually
+      // remove a regular user's Firestore data.
+      allow delete: if isOwner(uid) || isAdmin();
     }
 
     // ── Orders — owner read; admin full access; webhook creates ─
