@@ -638,8 +638,12 @@ function FeedContent() {
                 />
               </div>
 
-              {/* ── Bottom info ── */}
-              <div style={{ position: 'absolute', left: 0, right: 70, bottom: 0, padding: '1.5rem 1rem 1.2rem', zIndex: 10, opacity: uiVisible ? 1 : 0, transition: 'opacity .4s ease', pointerEvents: 'none' }}>
+              {/* ── Bottom info ──
+                  bottom offset clears the seek bar (and its time readout,
+                  only shown when hasVideo) anchored below at bottom:0 —
+                  without it the title/episode text sat underneath the bar
+                  and was unreadable where they overlapped. */}
+              <div style={{ position: 'absolute', left: 0, right: 70, bottom: hasVideo ? 52 : 34, padding: '1.5rem 1rem 0', zIndex: 10, opacity: uiVisible ? 1 : 0, transition: 'opacity .4s ease', pointerEvents: 'none' }}>
                 <div style={{ fontFamily: 'var(--rs-font-display)', fontWeight: 900, fontSize: '1rem', letterSpacing: '-.01em', textShadow: '0 1px 4px rgba(0,0,0,.8)', marginBottom: '.3rem' }}>{drama!.title}</div>
                 <div style={{ fontSize: '.88rem', fontWeight: 600, color: 'rgba(255,255,255,.85)', marginBottom: '.4rem', lineHeight: 1.3, textShadow: '0 1px 4px rgba(0,0,0,.8)' }}>{ep.title}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', fontSize: '.72rem', color: 'rgba(255,255,255,.6)', fontWeight: 600 }}>
