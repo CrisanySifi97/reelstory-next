@@ -14,6 +14,7 @@ import {
 import { onAuthStateChanged } from 'firebase/auth'
 import { useDrama } from '@/lib/useDramas'
 import { useMyList } from '@/lib/useMyList'
+import { useDownloads } from '@/lib/useDownloads'
 import Poster from '@/components/Poster'
 import { hdUrl } from '@/lib/cloudinary'
 import type { Episode } from '@/types'
@@ -75,6 +76,7 @@ function FeedContent() {
   const episodes = (drama?.episodes ?? []) as EpisodeWithId[]
 
   const { toggle: toggleList, isInList } = useMyList()
+  const { downloads } = useDownloads()
 
   // playback
   const [currentIdx, setCurrentIdx]     = useState(startEp)
@@ -253,13 +255,20 @@ function FeedContent() {
   // Paid episodes no longer carry their real video URL inline (it lives in the
   // admin-only "episodeUrls" collection) — once one is unlocked, fetch its
   // actual URL from /api/episode-url, which checks unlockedEpisodes server-side.
-  const videoSrc = (ep: EpisodeWithId) => ep.url || resolvedUrls[epKey(ep)]
+  // If the episode was downloaded, use that exact cached URL instead — it's
+  // what the service worker actually cached, and it works without a live
+  // connection, unlike re-resolving via /api/episode-url.
+  const videoSrc = (ep: EpisodeWithId) => {
+    const key = epKey(ep)
+    return ep.url || downloads.find(d => d.key === key)?.url || resolvedUrls[key]
+  }
 
   useEffect(() => {
     const ep = episodes[currentIdx] as EpisodeWithId | undefined
     if (!ep || ep.url) return
     const key = epKey(ep)
     if (resolvedUrls[key] || !isUnlocked(ep)) return
+    if (downloads.some(d => d.key === key)) return // already have the cached URL
     let cancelled = false
     ;(async () => {
       try {

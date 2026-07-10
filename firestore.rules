@@ -9,6 +9,14 @@ service cloud.firestore {
       return isAuth() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
+    // True only if the caller's own user doc already lists this episode key in
+    // likedEpisodes — ties the episodeStats counter to the toggle the client
+    // already writes to users/{uid} first, so a like/unlike can't be spammed
+    // by calling this collection directly without going through that write.
+    function hasLiked(id) {
+      return isAuth() &&
+        id in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('likedEpisodes', []);
+    }
 
     // ── Dramas — public read, admin write ──────────────────────
     // Authenticated users may update only the aggregate rating fields
@@ -61,17 +69,6 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // ── Comments — authenticated read/write; owner delete ──────
-    match /comments/{commentId} {
-      allow read:   if true;
-      allow create: if isAuth()
-                    && request.resource.data.uid == request.auth.uid
-                    && request.resource.data.text.size() <= 500;
-      allow update: if false;           // comments are immutable once posted
-      allow delete: if isAuth()
-                    && (resource.data.uid == request.auth.uid || isAdmin());
-    }
-
     // ── Ratings — authenticated read; owner write ──────────────
     // ratingId format: {dramaId}_{userId}
     // Validates: value is 1–5, userId matches the caller, no extra fields injected.
@@ -109,15 +106,19 @@ service cloud.firestore {
 
     // ── Episode stats (likes counter) — public read, authenticated write ─
     // Clients only ever toggle a like, so "likes" may only move by exactly ±1
-    // (or be created at exactly 1) per write.
+    // (or be created at exactly 1) per write — and only in the direction that
+    // matches whether the caller has actually liked this episode according to
+    // their own user doc, so the counter can't be inflated/deflated by calling
+    // this collection directly without the matching users/{uid} write.
     match /episodeStats/{id} {
       allow read: if true;
       allow create: if isAuth()
-                    && request.resource.data.likes == 1;
+                    && request.resource.data.likes == 1
+                    && hasLiked(id);
       allow update: if isAuth()
                     && request.resource.data.likes is number
-                    && (request.resource.data.likes == resource.data.likes + 1
-                        || request.resource.data.likes == resource.data.likes - 1);
+                    && ((request.resource.data.likes == resource.data.likes + 1 && hasLiked(id))
+                        || (request.resource.data.likes == resource.data.likes - 1 && !hasLiked(id)));
     }
 
     // ── Notifications (push history) — public read, admin write ─

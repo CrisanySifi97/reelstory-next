@@ -30,8 +30,13 @@ self.addEventListener('fetch', e => {
   const { request } = e
   const url = new URL(request.url)
 
-  // Cloudinary videos — serve from cache (downloaded episodes), fall back to network
-  if (url.hostname === 'res.cloudinary.com' && url.pathname.includes('/video/')) {
+  // Downloaded episode videos — serve from cache, fall back to network.
+  // Covers both the legacy Cloudinary host and the current Bunny CDN hosts
+  // (videos migrated from Cloudinary to Bunny; old downloads may still be
+  // cached under the Cloudinary URL, new ones are cached under Bunny URLs).
+  const isVideoHost = (url.hostname === 'res.cloudinary.com' && url.pathname.includes('/video/'))
+    || url.hostname.endsWith('.b-cdn.net')
+  if (isVideoHost) {
     e.respondWith(serveCachedVideo(request))
     return
   }
