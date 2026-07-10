@@ -111,7 +111,13 @@ export default function InicioPage() {
     .map(d => {
       const unlockedCount = unlockedEps.filter(k => k.startsWith(`${d.id}_`)).length
       const progress = d.episodes.length > 0 ? Math.round((unlockedCount / d.episodes.length) * 100) : 0
-      return { drama: d, progress }
+      // Resume at the first episode the user hasn't reached yet (free episodes
+      // and idx 0 are always accessible without unlocking) — not episode 0,
+      // which is what an ep-less /feed link would otherwise fall back to.
+      const nextIdx = d.episodes.findIndex((ep, i) =>
+        !(ep.free || i === 0 || unlockedEps.includes(`${d.id}_${ep.id}`)))
+      const resumeIdx = nextIdx === -1 ? Math.max(0, d.episodes.length - 1) : nextIdx
+      return { drama: d, progress, resumeIdx }
     })
     .filter(({ progress }) => progress > 0 && progress < 100)
     .sort((a, b) => (lastWatched[b.drama.id] ?? 0) - (lastWatched[a.drama.id] ?? 0))
@@ -228,7 +234,7 @@ export default function InicioPage() {
         ))}</>}
         <div style={{ opacity: loaded?1:0, transition:'opacity .4s' }}>
           {continueWatching.length > 0 && (
-            <Row title="Continuar a Ver" items={continueWatching.map(c=>c.drama)} cardFn={(d,i)=><DramaCard key={d.id} drama={d} size="continue" progress={continueWatching[i].progress} onClick={()=>router.push(`/feed?id=${d.id}&_n=${Date.now()}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
+            <Row title="Continuar a Ver" items={continueWatching.map(c=>c.drama)} cardFn={(d,i)=><DramaCard key={d.id} drama={d} size="continue" progress={continueWatching[i].progress} onClick={()=>router.push(`/feed?id=${d.id}&ep=${continueWatching[i].resumeIdx}&_n=${Date.now()}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
           )}
           <Row title="Top 10 Angola" items={top10} cardFn={(d,i)=><DramaCard key={d.id} drama={d} size="top10" rank={i+1} onClick={()=>router.push(`/detalhe/${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
           <Row title="Novos Episódios" items={novos} cardFn={(d)=><DramaCard key={d.id} drama={d} onClick={()=>router.push(`/detalhe/${d.id}`)} onToast={showToast} onList={()=>handleList(d.id)} inList={isInList(d.id)}/>}/>
