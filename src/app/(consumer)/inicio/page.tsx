@@ -86,18 +86,27 @@ export default function InicioPage() {
 
   // ── "Continuar a Ver" — based on the user's unlocked episodes ──
   const [unlockedEps, setUnlockedEps] = useState<string[]>([])
+  const [lastWatched, setLastWatched] = useState<Record<string, number>>({})
   useEffect(() => {
     let unsubDoc = () => {}
     const unsubAuth = onAuthStateChanged(auth, user => {
       unsubDoc()
-      if (!user) { setUnlockedEps([]); return }
+      if (!user) { setUnlockedEps([]); setLastWatched({}); return }
       unsubDoc = onSnapshot(doc(db, 'users', user.uid), snap => {
-        setUnlockedEps(snap.exists() ? (snap.data().unlockedEpisodes ?? []) : [])
+        if (!snap.exists()) { setUnlockedEps([]); setLastWatched({}); return }
+        const data = snap.data()
+        setUnlockedEps(data.unlockedEpisodes ?? [])
+        const raw = data.lastWatched ?? {}
+        const millis: Record<string, number> = {}
+        for (const dramaId in raw) millis[dramaId] = raw[dramaId]?.toMillis?.() ?? 0
+        setLastWatched(millis)
       })
     })
     return () => { unsubDoc(); unsubAuth() }
   }, [])
 
+  // Sorted by most recently watched first — dramas with no recorded activity
+  // yet (e.g. unlocked before this tracking existed) fall back to the end.
   const continueWatching = LIVE_DRAMAS
     .map(d => {
       const unlockedCount = unlockedEps.filter(k => k.startsWith(`${d.id}_`)).length
@@ -105,6 +114,7 @@ export default function InicioPage() {
       return { drama: d, progress }
     })
     .filter(({ progress }) => progress > 0 && progress < 100)
+    .sort((a, b) => (lastWatched[b.drama.id] ?? 0) - (lastWatched[a.drama.id] ?? 0))
 
   const handleList = async (dramaId: string) => {
     const result = await toggle(dramaId)

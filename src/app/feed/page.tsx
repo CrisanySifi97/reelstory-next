@@ -9,7 +9,7 @@ import {
 import { auth, db } from '@/lib/firebase'
 import {
   doc, getDoc, setDoc, updateDoc, runTransaction,
-  arrayUnion, arrayRemove, increment,
+  arrayUnion, arrayRemove, increment, serverTimestamp,
 } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useDrama } from '@/lib/useDramas'
@@ -306,6 +306,14 @@ function FeedContent() {
     }).catch(() => {})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx, dramaId2])
+
+  /* ── Record "last watched" so /inicio's "Continuar a Ver" row can sort by
+     recent activity instead of always showing the same (alphabetical) order ── */
+  useEffect(() => {
+    if (!uid || !dramaId2 || !episodes[currentIdx]) return
+    updateDoc(doc(db, 'users', uid), { [`lastWatched.${dramaId2}`]: serverTimestamp() }).catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIdx, uid, dramaId2])
 
   /* ── Auto-play / pause based on sheet state ── */
   useEffect(() => {
