@@ -210,7 +210,7 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right: form ── */}
-      <div style={{ width:460, flexShrink:0, background:'#16213E', display:'flex', alignItems:'center', justifyContent:'center', padding:'2rem' }}>
+      <div className="login-form-panel" style={{ width:460, flexShrink:0, background:'#16213E', display:'flex', alignItems:'center', justifyContent:'center', padding:'2rem' }}>
         <div style={{ width:'100%', maxWidth:380 }}>
 
           {/* Mobile logo */}
@@ -306,7 +306,7 @@ export default function LoginPage() {
         @keyframes scrollUp   { from { transform: translateY(0); }    to { transform: translateY(-50%); } }
         @keyframes scrollDown { from { transform: translateY(-50%); } to { transform: translateY(0); } }
         @media (max-width: 860px) { .login-left { display: none !important; } .login-mobile-logo { display: block !important; } }
-        @media (max-width: 500px) { div[style*="width: 460px"] { width: 100% !important; background: #1A1A2E !important; } }
+        @media (max-width: 500px) { .login-form-panel { width: 100% !important; background: #1A1A2E !important; } }
       `}</style>
     </div>
   )
