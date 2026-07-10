@@ -103,6 +103,11 @@ function FeedContent() {
   const progRef   = useRef<ReturnType<typeof setInterval> | null>(null)
   const videoRef  = useRef<HTMLVideoElement>(null)
 
+  // Paid episodes' real URL resolves async (see the effect further down) —
+  // declared here (rather than next to that effect) so the progress-bar
+  // reset effect above can depend on it too.
+  const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({})
+
   const fmtTime = (s: number) => {
     const t = Math.floor(s || 0)
     return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`
@@ -184,8 +189,12 @@ function FeedContent() {
   // `unlocked` is intentional: when the user spends points to unlock the current
   // episode, this restarts the fake progress bar from 0 instead of leaving it
   // wherever it was while the "locked" placeholder was showing.
+  // `resolvedUrls` is also intentional: hasVideo depends on it (via videoSrc),
+  // and without it here the fake interval — started while a paid episode's
+  // URL was still resolving — never got cleared once the real video showed
+  // up, so it kept ticking the bar up on its own regardless of play/pause.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIdx, unlocked])
+  }, [currentIdx, unlocked, resolvedUrls])
 
   /* ── Scroll to startEp + track visible episode via scroll position ── */
   // Replaced IntersectionObserver: IO fires initial callbacks for ALL targets
@@ -244,7 +253,6 @@ function FeedContent() {
   // Paid episodes no longer carry their real video URL inline (it lives in the
   // admin-only "episodeUrls" collection) — once one is unlocked, fetch its
   // actual URL from /api/episode-url, which checks unlockedEpisodes server-side.
-  const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({})
   const videoSrc = (ep: EpisodeWithId) => ep.url || resolvedUrls[epKey(ep)]
 
   useEffect(() => {
